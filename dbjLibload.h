@@ -14,16 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "../dbjfm/dbjfm.h"
-
-/*
 #include <windows.h> // HINSTANCE
 #include <string>
 #include <iostream>
 #include <cstdlib>      // for std::exit, EXIT_FAILURE, EXIT_SUCCESS  
 #include <exception>    // for std::set_terminate  
-#include "dbjSimple.h"
-*/
 
 namespace dbj {
 
@@ -52,7 +47,7 @@ namespace dbj {
 				dllHandle_ = ::LoadLibrary(libpath);
 				// address of filename of executable module 
 				if (NULL == dllHandle_)
-					throw dbj::exception(L"Could not find the DLL named: " + dllName_);
+					throw std::exception(L"Could not find the DLL named: " + dllName_);
 			}
 			/*
 			FreeLibrary() failure is very rare and might signal some deep error with the machines or OS
@@ -64,7 +59,11 @@ namespace dbj {
 				if (NULL != dllHandle_)
 					if (!FreeLibrary(dllHandle_))
 					{
-						std::wcerr << L"dbj::Libload::FreeLibrary failed. DLL name was " + dllName_ << std::endl;
+						std::wclog 
+						<< L"dbj::Libload::FreeLibrary failed. DLL name was " 
+						+ dllName_ 
+						<< std::endl;
+						// https://en.cppreference.com/w/cpp/io/clog
 					}
 			}
 
@@ -74,9 +73,9 @@ namespace dbj {
 
 				if (NULL != dllHandle_)
 					result =
-					::GetProcAddress(
+					::GetProcAddressW(
 					(HMODULE)dllHandle_,  // handle to DLL module 
-						dbj::str::to_str(funName).c_str()		// name of a function 
+						std::wstring{funName}.data()		// name of a function 
 					);
 				return result;
 			}
