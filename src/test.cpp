@@ -1,6 +1,4 @@
-#include "../stdafx.h"
-/*
-*/
+
 #include "dbjlibload.h"
 
 namespace {

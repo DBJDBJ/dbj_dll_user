@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-
+#include <windows.h> // HINSTANCE
+#include <string>
+#include <iostream>
+#include <cstdlib>      // for std::exit, EXIT_FAILURE, EXIT_SUCCESS  
+#include <exception>    // for std::set_terminate  
 
 namespace dbj {
 
@@ -64,15 +67,15 @@ namespace dbj {
 						L" needs dll or exe name as the first argument"
 					);
 
-				if (is_system_module) {
-					dllName_ = nano::prefix( L"\\",dllName_);
+				if (! is_system_module) {
+					dllName_ = nano::prefix( L".\\",dllName_);
 				}
 				// address of filename of executable module 
 				dllHandle_ = ::LoadLibrary(dllName_.c_str());
 				if (NULL == dllHandle_)
 					throw nano::exception(
 						nano::prefix( 
-							L"Could not find the DLL named: ",  
+							L" Could not find the DLL named: ",  
 						    dllName_
 						)
 					);
