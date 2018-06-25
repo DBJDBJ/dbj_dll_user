@@ -29,11 +29,11 @@ auto beeper = []( auto fp) {
 	const UINT step = 50;
 
 	do {
-		std::wcout << L"beepFunction( Frequency:" << frequency << ", Duration:"
-			<< duration << L" )" << std::endl;
+		dbj::nano::log( L"\nbeepFunction( Frequency:" , frequency , ", Duration:"
+			, duration , L" )" );
 
 		if (0 == beepFunction(frequency, duration)) {
-			std::wcerr << L" FAILED ?" << std::endl;
+			dbj::nano::log( L" FAILED ?" );
 			break;
 		}
 		frequency -= step;
@@ -68,7 +68,8 @@ auto beeper = []( auto fp) {
 
 int wmain(int argc, const wchar_t * argv[], wchar_t * envp) {
 
-	std::wclog << std::endl << argv[0] << std::endl;
+	using namespace dbj::nano; 
+	log("\n", appname( argv[0] ) , "\n" );
 	int exit_code = EXIT_SUCCESS;
 
 	try {
@@ -76,13 +77,15 @@ int wmain(int argc, const wchar_t * argv[], wchar_t * envp) {
 	}
 	catch ( std::exception rex )
 	{
-		std::clog << L"\nRun time exception: " << rex.what() << std::endl;
+		log( L"\nRun time exception: ", rex.what() );
 		exit_code = EXIT_FAILURE;
 	}
 	catch (...)
 	{
-		std::clog << L"\nUnknown exception: " << std::endl;
+		log(L"\nUnknown exception: ");
 		exit_code = EXIT_FAILURE;
 	}
+
+	log("\n");
 	return exit_code;
 }

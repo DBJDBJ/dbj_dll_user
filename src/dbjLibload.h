@@ -24,42 +24,62 @@ namespace dbj {
 	// nano lib
 	namespace nano {
 
-		std::string to_string( const std::wstring & wide  )
+		std::string to_string( std::wstring_view wide  )
 		{
 			return { wide.begin(), wide.end() };
 		}
 
-		std::string to_wstring(const std::string & narrow )
+		std::string to_wstring( std::string_view narrow )
 		{
 			return { narrow.begin(), narrow.end() };
 		}
 
-		std::exception exception ( const std::wstring & wide )
+		std::exception exception ( std::wstring_view wide )
 		{
 			return std::runtime_error(
 				to_string(wide).c_str()
 			);
 		}
 
-		std::wstring prefix(std::wstring pre, std::wstring post)
+		std::wstring prefix(std::wstring pre, std::wstring_view post)
 		{
 			return pre.append(post);
+		}
+
+		// https://en.cppreference.com/w/cpp/io/clog
+		template< typename ... Args>
+		auto log( Args && ... rest) {
+			if ((sizeof ... (rest)) > 0)
+				( std::wclog << ... << rest );
+		}
+
+		constexpr wchar_t path_delimiter = L'\\';
+
+		std::wstring appname( std::wstring_view path )
+		{
+			auto const pos = path.find_last_of( path_delimiter );
+			if (std::wstring::npos != pos) {
+				return std::wstring{ path.substr(pos + 1) };
+			}
+			return std::wstring { path };
 		}
 	} // nano
 
 	namespace win {
 
-		class Libload
+		class Libload final
 		{
 			/*
-			forbidden operations are private, thus unreachable for callers
-			or inheritors
+			forbidden operations are private, 
+			thus unreachable for callers
 			*/
 			Libload() {}
 		public:
+			explicit
 			Libload(const wchar_t * dllFname, bool system_mod = false)
 				: dllHandle_(NULL), dllName_(dllFname), is_system_module(system_mod)
 			{
+				_ASSERTE( dllFname != nullptr );
 				if (dllName_.empty())
 					throw 
 					nano::exception (
@@ -71,7 +91,7 @@ namespace dbj {
 					dllName_ = nano::prefix( L".\\",dllName_);
 				}
 				// address of filename of executable module 
-				dllHandle_ = ::LoadLibrary(dllName_.c_str());
+				dllHandle_ = ::LoadLibraryW(dllName_.c_str());
 				if (NULL == dllHandle_)
 					throw nano::exception(
 						nano::prefix( 
@@ -81,20 +101,18 @@ namespace dbj {
 					);
 			}
 			/*
-			FreeLibrary() failure is very rare and might signal some deep error with the machines or OS
+			FreeLibrary() failure is very rare and might signal 
+			some deep error with the machines or OS
 			thus we will not ignore it.
-			NOTE: C++11 standard behavior is not to throw exceptions from destructor
 			*/
 			~Libload()
 			{
 				if (NULL != dllHandle_)
 					if (!FreeLibrary(dllHandle_))
 					{
-						std::wclog 
-						<< L"dbj::Libload::FreeLibrary failed. DLL name was " 
-						+ dllName_ 
-						<< std::endl;
-						// https://en.cppreference.com/w/cpp/io/clog
+						nano::log(
+						L"\ndbj::Libload::FreeLibrary failed. DLL name was " 
+						, dllName_ );
 					}
 			}
 
@@ -103,7 +121,7 @@ namespace dbj {
 				FARPROC result = NULL;
 				// GetProcAddress
 				// has no unicode equivalent
-				if (NULL != dllHandle_)
+				_ASSERTE(NULL != dllHandle_);
 					result =
 					::GetProcAddress(
 					(HMODULE)dllHandle_,  // handle to DLL module 
