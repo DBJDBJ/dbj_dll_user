@@ -17,8 +17,6 @@ limitations under the License.
 #include <string>
 #include <exception>
 #include <iostream>
-#include <cstdlib>      // for std::exit, EXIT_FAILURE, EXIT_SUCCESS  
-#include <exception>    // for std::set_terminate  
 #include <string>
 #include <string_view>
 
