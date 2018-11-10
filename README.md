@@ -5,32 +5,28 @@
 ### C++17
 
 ```cpp
-  
-	inline void test_dbjLibload(
-		const wchar_t * dll_ = L"kernel32.dll",
-		const wchar_t * fun_ = L"Beep")
-	{
-		/* second argument if true means 'system dll is required' */
-		auto dll = dbj::win::libload(dll_, true);
-		/* note to win32 scouts: fp type bellow is FARPROC */
-		auto  fp = dll.getFunction(fun_);
-		if (!fp) {
-			throw 
-			dbj::nano::terror(
-			  dbj::nano::prefix(
-				fun_ , L" -- Function not found?"
-			));
-		}
-      // beeping
+       // beep signature
     	typedef BOOL(*BeepFP) (DWORD, DWORD);
-     	BeepFP beepFunction = (BeepFP)fp;
-      beepFunction(1000,1000) ;
-		// free-ing dll lib loaded 
-		// happens here
-				
-	} // test_dbjLibload
-```
 
+inline auto test_dbjLibload 
+ = [&] ( auto dll_ , auto fun_  ) -> void
+{
+/* second argument if true means 'system dll is required' */
+	auto dll = dbj::win::libload(dll_, true);
+	BeepFP  fp = dll.getFunction<BeepFP>(fun_);
+	if (!fp) {
+		throw 
+		dbj::nano::terror(
+		  dbj::nano::prefix(
+			fun_ , L" -- Function not found?"
+		));
+	}
+  fp(1000,1000) ;
+} // test_dbjLibload
+// calling with wstring_view literals_
+test_dbjLibload(L"kernel32.dll"sv, L"Beep"sv );
+```
+<hr/>
 Copyright 2018 by dbj@dbj.org
 
 Licensed under the Apache License, Version 2.0 (the "License");
