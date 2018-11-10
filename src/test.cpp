@@ -45,21 +45,17 @@ auto beeper = []( auto fp) {
 		const wchar_t * fun_ = L"Beep")
 	{
 		/* second argument if true means 'system dll is required' */
-		dbj::win::Libload dll(dll_, true);
-
+		auto dll = dbj::win::libload(dll_, true);
 		/* note to win32 scouts: fp type bellow is FARPROC */
 		auto  fp = dll.getFunction(fun_);
-
 		if (!fp) {
 			throw 
-			dbj::nano::exception(
+			dbj::nano::terror(
 			  dbj::nano::prefix(
 				fun_ , L" -- Function not found?"
 			));
 		}
-
 		beeper(fp);
-
 		// free-ing dll lib loaded 
 		// happens here
 				
@@ -75,7 +71,7 @@ int wmain(int argc, const wchar_t * argv[], wchar_t * envp) {
 	try {
 		test_dbjLibload();
 	}
-	catch ( std::exception rex )
+	catch ( const std::exception & rex )
 	{
 		log( L"\nRun time exception: ", rex.what() );
 		exit_code = EXIT_FAILURE;

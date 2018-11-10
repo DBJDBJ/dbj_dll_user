@@ -15,74 +15,99 @@ limitations under the License.
 */
 #include <windows.h> // HINSTANCE
 #include <string>
+#include <exception>
 #include <iostream>
 #include <cstdlib>      // for std::exit, EXIT_FAILURE, EXIT_SUCCESS  
 #include <exception>    // for std::set_terminate  
+#include <string>
+#include <string_view>
 
 namespace dbj {
 
 	// nano lib
 	namespace nano {
 
-		std::string to_string( std::wstring_view wide  )
-		{
-			return { wide.begin(), wide.end() };
-		}
+		using namespace ::std;
+		using namespace ::std::string_view_literals;
 
-		std::string to_wstring( std::string_view narrow )
+			/*
+			Transform any std string or string view
+			into any of the 4 the std string types,
+			Apache 2.0 (c) 2018 by DBJ.ORG
+			*/
+			template<typename T, typename F>
+		inline T
+			transform_to(F str) noexcept
 		{
-			return { narrow.begin(), narrow.end() };
-		}
+			if (str.empty())
+				return {};
+			return { std::begin(str), std::end(str) };
+		};
 
-		std::exception exception ( std::wstring_view wide )
+		inline exception terror ( wstring_view msg_ )
 		{
 			return std::runtime_error(
-				to_string(wide).c_str()
+				transform_to<string>(msg_)
 			);
 		}
 
-		std::wstring prefix(std::wstring pre, std::wstring_view post)
+		inline std::wstring prefix(std::wstring pre, std::wstring_view post)
 		{
 			return pre.append(post);
 		}
 
 		// https://en.cppreference.com/w/cpp/io/clog
 		template< typename ... Args>
-		auto log( Args && ... rest) {
+		inline void log( Args && ... rest) {
 			if ((sizeof ... (rest)) > 0)
 				( std::wclog << ... << rest );
 		}
 
-		constexpr wchar_t path_delimiter = L'\\';
+		constexpr inline const wchar_t path_delimiter = L'\\';
 
-		std::wstring appname( std::wstring_view path )
+		inline std::wstring appname( std::wstring_view path )
 		{
 			auto const pos = path.find_last_of( path_delimiter );
 			if (std::wstring::npos != pos) {
 				return std::wstring{ path.substr(pos + 1) };
 			}
-			return std::wstring { path };
+			return { path.begin(), path.end() };
 		}
 	} // nano
 
 	namespace win {
 
+		using namespace ::std;
+
+		// return instance of std::system_error
+		inline auto error() 
+			->  system_error
+		{
+			struct error_ final {
+				error_() { }
+				~error_() { ::SetLastError(0); }
+				int operator() () const noexcept {
+					return (int)::GetLastError();
+				}
+			};
+			error_ last; 
+			return std::system_error( error_code( last(), _System_error_category() ));
+		}
+
 		class Libload final
 		{
-			/*
-			forbidden operations are private, 
-			thus unreachable for callers
-			*/
 			Libload() {}
 		public:
-			explicit
-			Libload(const wchar_t * dllFname, bool system_mod = false)
-				: dllHandle_(NULL), dllName_(dllFname), is_system_module(system_mod)
+			explicit Libload (
+				wstring_view dllFname, 
+				bool system_mod = false
+			)
+				: dllHandle_(NULL), dllName_(dllFname.data()), is_system_module(system_mod)
 			{
-				_ASSERTE( dllFname != nullptr );
+				_ASSERTE( dllFname.data() != nullptr );
 				if (dllName_.empty())
 					throw 
-					nano::exception (
+					nano::terror (
 						__FUNCSIG__
 						L" needs dll or exe name as the first argument"
 					);
@@ -92,8 +117,7 @@ namespace dbj {
 				}
 				// address of filename of executable module 
 				dllHandle_ = ::LoadLibraryW(dllName_.c_str());
-				if (NULL == dllHandle_)
-					throw nano::exception(
+				if (NULL == dllHandle_) throw nano::terror(
 						nano::prefix( 
 							L" Could not find the DLL named: ",  
 						    dllName_
@@ -110,13 +134,15 @@ namespace dbj {
 				if (NULL != dllHandle_)
 					if (!FreeLibrary(dllHandle_))
 					{
+						system_error sys_e_ = error();
 						nano::log(
 						L"\ndbj::Libload::FreeLibrary failed. DLL name was " 
-						, dllName_ );
+						, dllName_
+						, "\nlast win error was:", sys_e_.what() );
 					}
 			}
 
-			FARPROC getFunction(const wchar_t * funName)
+			FARPROC getFunction(wstring_view funName)
 			{
 				FARPROC result = NULL;
 				// GetProcAddress
@@ -125,16 +151,23 @@ namespace dbj {
 					result =
 					::GetProcAddress(
 					(HMODULE)dllHandle_,  // handle to DLL module 
-						nano::to_string( funName ).c_str()		// name of a function 
+						nano::transform_to<string>( funName ).c_str()
+						// name of a function 
 					);
 				return result;
 			}
 
 		protected:
-			HINSTANCE	dllHandle_;
-			std::wstring	dllName_;
-			bool is_system_module = false;
+			HINSTANCE			dllHandle_;
+			std::wstring		dllName_;
+			bool				is_system_module = false;
 		};
+
+		/* second argument if true means 'system dll is required' */
+		inline auto libload( wstring_view dll_, bool is_system_dll = false )
+		{
+			return dbj::win::Libload(dll_, is_system_dll);
+		}
 	} // win
 } // dbj
 
