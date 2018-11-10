@@ -51,9 +51,9 @@ namespace dbj {
 			);
 		}
 
-		inline std::wstring prefix(std::wstring pre, std::wstring_view post)
+		inline std::wstring prefix(std::wstring_view pre, std::wstring_view post)
 		{
-			return pre.append(post);
+			return wstring(pre.data()).append(post.data());
 		}
 
 		// https://en.cppreference.com/w/cpp/io/clog
@@ -142,7 +142,11 @@ namespace dbj {
 					}
 			}
 
-			FARPROC getFunction(wstring_view funName)
+			/*
+			AFT = Actual Function Type
+			*/
+			template< typename AFT>
+			AFT getFunction(wstring_view funName)
 			{
 				FARPROC result = NULL;
 				// GetProcAddress
@@ -154,7 +158,7 @@ namespace dbj {
 						nano::transform_to<string>( funName ).c_str()
 						// name of a function 
 					);
-				return result;
+				return (AFT)result;
 			}
 
 		protected:
