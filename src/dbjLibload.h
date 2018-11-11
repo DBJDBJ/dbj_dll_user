@@ -28,12 +28,7 @@ namespace dbj {
 		using namespace ::std;
 		using namespace ::std::string_view_literals;
 
-			/*
-			Transform any std string or string view
-			into any of the 4 the std string types,
-			Apache 2.0 (c) 2018 by DBJ.ORG
-			*/
-			template<typename T, typename F>
+		template<typename T, typename F>
 		inline T
 			transform_to(F str) noexcept
 		{
@@ -48,28 +43,18 @@ namespace dbj {
 				transform_to<string>(msg_)
 			);
 		}
-
+		/*
 		inline std::wstring prefix(std::wstring_view pre, std::wstring_view post)
 		{
 			return wstring(pre.data()).append(post.data());
 		}
-
+		*/
 		// https://en.cppreference.com/w/cpp/io/clog
 		template< typename ... Args>
 		inline void log( Args && ... rest) {
-			if ((sizeof ... (rest)) > 0)
-				( std::wclog << ... << rest );
-		}
-
-		constexpr inline const wchar_t path_delimiter = L'\\';
-
-		inline std::wstring appname( std::wstring_view path )
-		{
-			auto const pos = path.find_last_of( path_delimiter );
-			if (std::wstring::npos != pos) {
-				return std::wstring{ path.substr(pos + 1) };
+			if constexpr ((sizeof ... (rest)) > 0) {
+				(std::wclog << ... << rest);
 			}
-			return { path.begin(), path.end() };
 		}
 	} // nano
 
@@ -77,19 +62,23 @@ namespace dbj {
 
 		using namespace ::std;
 
+		struct last_error  final {
+			last_error() { }
+			~last_error() { ::SetLastError(0); }
+			int operator() () const noexcept {
+				return (int)::GetLastError();
+			}
+		};
 		// return instance of std::system_error
-		inline auto error() 
+		inline auto error_instance ( ) 
 			->  system_error
 		{
-			struct error_ final {
-				error_() { }
-				~error_() { ::SetLastError(0); }
-				int operator() () const noexcept {
-					return (int)::GetLastError();
-				}
-			};
-			error_ last; 
+			last_error last;
+#ifdef _MSC_VER
 			return std::system_error( error_code( last(), _System_error_category() ));
+#else
+			return std::system_error(error_code(last(), system_category()));
+#endif
 		}
 
 		class Libload final
@@ -111,15 +100,12 @@ namespace dbj {
 					);
 
 				if (! is_system_module) {
-					dllName_ = nano::prefix( L".\\",dllName_);
+					dllName_ =  L".\\" + dllName_ ;
 				}
 				// address of filename of executable module 
 				dllHandle_ = ::LoadLibraryW(dllName_.c_str());
 				if (NULL == dllHandle_) throw nano::terror(
-						nano::prefix( 
-							L" Could not find the DLL named: ",  
-						    dllName_
-						)
+					L" Could not find the DLL named: " + dllName_
 					);
 			}
 			/*
@@ -132,7 +118,7 @@ namespace dbj {
 				if (NULL != dllHandle_)
 					if (!FreeLibrary(dllHandle_))
 					{
-						system_error sys_e_ = error();
+						system_error sys_e_ = error_instance();
 						nano::log(
 						L"\ndbj::Libload::FreeLibrary failed. DLL name was " 
 						, dllName_
