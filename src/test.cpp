@@ -46,20 +46,19 @@ inline auto beeper (BOOL(*beepFunction) (DWORD, DWORD) )
 	inline void test_dbjLibload 
 		(	wstring dll_ , wstring fun_ , F test_fun )
 	{
-		// load the dll
-		// second argument if true means 'system dll is required' 
-		auto dll = dbj::win::libload(dll_, true);
-		// get the function
-			BeepFP  fp = dll.getFunction<BeepFP>(fun_);
-		if (!fp) {
-			throw dbj::nano::terror(
-				fun_ + L" -- Function not found?" );
-		}
-		::wprintf(L"\nTesting function %s '%S', from '%s'\n", 
-			fun_.data(), typeid(fp).name(), dll_.data() );
-
-		test_fun(fp);
-				
+		// note: bellow is a C++17 if() syntax
+			if (
+				// load the dll + get the function
+				// third argument if true means 'system dll is required' 
+				BeepFP  fp = dbj::win::funload<BeepFP>(dll_, fun_, true);
+				fp 
+			) {
+				::wprintf(L"\nTesting function %s '%S', from '%s'\n",
+					fun_.data(), typeid(fp).name(), dll_.data());
+				test_fun(fp);
+			} else {
+				throw dbj::nano::terror(fun_ + L" -- Function not found?");
+			}
 	}; // test_dbjLibload
 } 
 
@@ -70,6 +69,10 @@ int wmain(int argc, const wchar_t * argv[], wchar_t * envp) {
 	int exit_code = EXIT_SUCCESS;
 
 	try {
+		// direct use
+		BeepFP  fp = dbj::win::funload<BeepFP>(L"kernel32.dll", L"Beep", true);
+		fp(1000, 1000);
+		// using a fancy test unit
 		test_dbjLibload(L"kernel32.dll"s, L"Beep"s, beeper );
 	}
 	catch ( const std::exception & rex )

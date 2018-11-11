@@ -126,9 +126,7 @@ namespace dbj {
 					}
 			}
 
-			/*
-			AFT = Actual Function Type
-			*/
+			/*			AFT = Actual Function Type			*/
 			template< typename AFT>
 			AFT getFunction(wstring_view funName)
 			{
@@ -156,6 +154,17 @@ namespace dbj {
 		{
 			return dbj::win::Libload(dll_, is_system_dll);
 		}
+
+		/*  or do it all function,	AFT = Actual Function Type			*/
+		template< typename AFT>
+		inline AFT funload(
+			wstring_view dll_, wstring_view fun_, 
+			bool is_system_dll = false)
+		{
+			return 
+				dbj::win::Libload(dll_, is_system_dll).getFunction<AFT>(fun_) ;
+		}
+
 	} // win
 } // dbj
 

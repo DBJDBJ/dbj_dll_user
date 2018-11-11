@@ -1,31 +1,32 @@
 # dbjdll
 
-## WIN32 DLL dynamic loader
+## C++17 WIN32 DLL dynamic loader
 
-### C++17
+### Usage
+
+Basically there is one funcion that does it all. For it to be used you need 
+three things
+
+1. the dll name 
+2. the function name
+3. the function signature
 
 ```cpp
-       // beep signature
-    	typedef BOOL(*BeepFP) (DWORD, DWORD);
+// the Beep function signature
+typedef BOOL(*BeepFP) (DWORD, DWORD);
 
-inline auto test_dbjLibload 
- = [&] ( auto dll_ , auto fun_  ) -> void
-{
-/* second argument if true means 'system dll is required' */
-	auto dll = dbj::win::libload(dll_, true);
-	BeepFP  fp = dll.getFunction<BeepFP>(fun_);
-	if (!fp) {
-		throw 
-		dbj::nano::terror(
-		  dbj::nano::prefix(
-			fun_ , L" -- Function not found?"
-		));
-	}
-  fp(1000,1000) ;
-} // test_dbjLibload
-// calling with wstring_view literals_
-test_dbjLibload(L"kernel32.dll"sv, L"Beep"sv );
+// load the dll + get the function
+BeepFP  fp = dbj::win::funload<BeepFP>(
+  L"kernel32.dll", 
+  L"Beep", 
+// third argument if true means 'system dll is required' 
+  true);
+
+// just use it
+fp(1000,1000);
 ```
+dll will be properly unloaded when it's holder goes out of scope.
+For the fancy test unit please look into test.cpp .
 <hr/>
 Copyright 2018 by dbj@dbj.org
 
