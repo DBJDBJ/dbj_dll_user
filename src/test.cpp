@@ -3,7 +3,7 @@
 
 namespace {
 /*
-Please remeber -- std runtime error  is thrown on any error
+Please remeber -- dbj runtime error  is thrown on any error
 	
 NOTE: we could make the test function a template and receive
 beeper in where the Bepp function usage will be
@@ -77,10 +77,12 @@ static void try_get_geo_infoex()
 		int (*)( PWSTR ,GEOTYPE, PWSTR ,int);
 	// direct use
 	try {
+		GGIEX  fp = dbj::win::dll_call<GGIEX>(
+			L"kernel32.dll", L"GetGeoInfoEx", true
+			);
+
 		// if dll is found but function inside
 		// it is not found, fp is nullptr
-		GGIEX  fp = dbj::win::dll_call<GGIEX>(L"kernel32.dll", L"GetGeoInfoEx", true);
-
 		if (nullptr == fp) return;
 
 		// else use it
