@@ -77,7 +77,7 @@ static void try_get_geo_infoex()
 	// direct use
 	try {
 		// if dll is not found exception is thrown
-		auto  fp = dbj::win::dll_dyna_load<GGIEX>(
+		auto fp = dbj::win::dll_dyna_load<GGIEX>(
 			"kernel32.dll", "GetGeoInfoEx"
 			);
 

@@ -119,19 +119,16 @@ namespace dbj {
 
 
 		};
-#if 0
-		/* second argument if true means 'system dll is required' */
-		inline auto dll_dyna_load
-		( string_view dll_, bool is_system_dll = true )
-		{
-			return ::dbj::win::dll_load(dll_, is_system_dll);
-		}
-#endif
-		/*  or do it all function,	AFT = Actual Function Type			*/
+
+		/*  
+		The 'do it all function',
+		AFT = Actual Function Type			
+		*/
 		template< typename AFT>
 		inline AFT dll_dyna_load(
 			string_view dll_, string_view fun_, 
-			bool is_system_dll = true)
+			bool is_system_dll = true,
+			AFT = 0)
 		{
 			return 
 				::dbj::win::dll_load(dll_, is_system_dll)

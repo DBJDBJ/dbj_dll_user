@@ -132,12 +132,6 @@ Also. We do not want to be "mixed" with things from the std space.
 		inline ::dbj::exception terror(basic_string<C> msg_) {
 			return terror(basic_string_view<C>(msg_.c_str()));
 		}
-#if 0
-		template< typename C, size_t N >
-		inline ::dbj::exception terror(const C(&msg_)[N]) {
-			return terror(basic_string_view<C>(msg_));
-		}
-#endif
 
 		template< typename C >
 		inline std::basic_string<C> prefix(
