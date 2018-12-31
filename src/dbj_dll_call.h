@@ -52,73 +52,75 @@ namespace dbj {
 #endif
 		}
 
-		class dll_load final
-		{
-			HINSTANCE			dll_handle_{};
-			std::string		    dll_name_{};
-			bool				is_system_module{ true };
+/*
+dynamic dll loading and fetching a function from the said dll
+*/
+class dll_load final
+{
+	HINSTANCE			dll_handle_{};
+	std::string		    dll_name_{};
+	bool				is_system_module{ true };
 
-			dll_load() {}
-		public:
-			explicit dll_load (
-				string_view dll_file_name_, 
-				bool system_mod = true
-			)
-				: dll_handle_(NULL), 
-				  dll_name_(dll_file_name_.data()), 
-				  is_system_module(system_mod)
+	dll_load() {}
+public:
+	explicit dll_load (
+		string_view dll_file_name_, 
+		bool system_mod = true
+	)
+		: dll_handle_(NULL), 
+			dll_name_(dll_file_name_.data()), 
+			is_system_module(system_mod)
+	{
+		if (dll_name_.empty()) throw 
+			nano::terror (
+			"dll_load(), needs dll or exe name as the first argument"sv
+			);
+
+		// address of filename of executable module 
+		dll_handle_ = ::LoadLibraryA(dll_name_.c_str());
+
+		if (NULL == dll_handle_) throw nano::terror(
+				" Could not find the DLL named: " + dll_name_
+			);
+	}
+	/*
+	FreeLibrary() failure is very rare and might signal 
+	some deep error with the machines or OS
+	thus we will not ignore it.
+	*/
+	~dll_load()
+	{
+		if (NULL != dll_handle_)
+			if (!::FreeLibrary(dll_handle_))
 			{
-				if (dll_name_.empty()) throw 
-					nano::terror (
-					"dll_load(), needs dll or exe name as the first argument"sv
-					);
-
-				// address of filename of executable module 
-				dll_handle_ = ::LoadLibraryA(dll_name_.c_str());
-
-				if (NULL == dll_handle_) throw nano::terror(
-					 " Could not find the DLL named: " + dll_name_
-					);
+				system_error sys_e_ = error_instance();
+				nano::log(
+				L"\ndbj::dll_load::FreeLibrary failed. DLL name is: " 
+				, dll_name_
+				, "\nlast win32 error is:\t", sys_e_.what() );
 			}
-			/*
-			FreeLibrary() failure is very rare and might signal 
-			some deep error with the machines or OS
-			thus we will not ignore it.
-			*/
-			~dll_load()
-			{
-				if (NULL != dll_handle_)
-					if (!::FreeLibrary(dll_handle_))
-					{
-						system_error sys_e_ = error_instance();
-						nano::log(
-						L"\ndbj::dll_load::FreeLibrary failed. DLL name is: " 
-						, dll_name_
-						, "\nlast win32 error is:\t", sys_e_.what() );
-					}
-			}
+	}
 
-			/*		
-			AFT = Actual Function Type			
-			returns null or function pointer to the one requested
-			*/
-			template< typename AFT>
-			AFT get_function(string_view funName)
-			{
-				_ASSERTE(NULL != dll_handle_);
-				// GetProcAddress
-				// has no unicode equivalent
-				FARPROC result =
-					::GetProcAddress(
-					(HMODULE)dll_handle_,  // handle to DLL module 
-						funName.data()
-						// name of a function 
-					);
-				return (AFT)result;
-			}
-
-
-		};
+	/*		
+	AFT = Actual Function Type			
+	returns null or function pointer to the one requested
+	*/
+	template< typename AFT>
+	AFT get_function(string_view funName)
+	{
+		_ASSERTE(NULL != dll_handle_);
+		// GetProcAddress
+		// has no unicode equivalent
+		FARPROC result =
+			::GetProcAddress(
+			// handle to DLL module 
+			(HMODULE)dll_handle_,  
+			// name of a function 
+			funName.data()
+			);
+		return (AFT)result;
+	}
+};
 
 		/*  
 		The 'do it all function',
