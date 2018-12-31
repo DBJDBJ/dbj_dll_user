@@ -10,159 +10,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <windows.h> // HINSTANCE
-#include <crtdbg.h> 
-#include <string>
-#include <exception>
-#include <iostream>
-#include <string>
-#include <string_view>
+#include "dbj_nano_lib.h"
 
 namespace dbj {
-
-	using ::std::string;
-	using ::std::wstring;
-
-	namespace nano 
-	{
-		template<typename T, typename F>
-		inline T
-			transform_to(F str) noexcept
-		{
-			if (str.empty()) return {};
-			return { std::begin(str), std::end(str) };
-		};
-		// no native pointers please
-		template<typename T, typename F>
-		inline T transform_to(F * ) = delete;
-
-	} // nano
-
-	/*
-	one should not do anything inside std space or inherit
-	from any std abstractions, thus
-	we deliberately do not inherit from std::exception
-	dbj::exception is the same interface and functionality
-	as std::exception
-	*/
-#pragma warning(push)
-#pragma warning(disable: 4577) // 'noexcept' used with no exception handling mode specified
-	class exception
-	{
-		std::string data_{};
-	public:
-
-		exception() noexcept : data_() {	}
-
-		explicit exception(char const* const message_ ) noexcept
-			: data_(message_)
-		{
-			_STL_VERIFY(nullptr != message_, __FUNCSIG__ " constructor argument can not be a null");
-		}
-
-		exception(wchar_t const* const message_, int) noexcept
-			: data_( ::dbj::nano::transform_to<string>(wstring(message_)) )
-		{
-			_STL_VERIFY(nullptr != message_, __FUNCSIG__ " constructor argument can not be a null");
-		}
-
-		exception(char const* const message_, int) noexcept
-			: data_(message_)
-		{
-			_STL_VERIFY(nullptr != message_, __FUNCSIG__ " constructor argument can not be a null");
-		}
-
-		exception(exception const& other_ ) noexcept
-			: data_( other_.data_ )
-		{
-		}
-
-		exception& operator=(exception const& other_) noexcept
-		{
-			if (this == &other_) {
-				return *this;
-			}
-				data_ = other_.data_;
-			return *this;
-		}
-
-		virtual ~exception() noexcept
-		{
-			data_.clear();
-		}
-
-		virtual char const* what() const
-		{
-			return data_.size() > 1 ? data_.c_str() : "Unknown dbj exception";
-		}
-	};
-
-	// dbj runtime_error
-	class runtime_error
-		: public ::dbj::exception
-	{	// base of all runtime-error exceptions
-	public:
-		typedef ::dbj::exception parent_ ;
-
-		explicit runtime_error(const string& message_)
-			: parent_(message_.c_str())
-		{	// construct from message string
-		}
-
-		explicit runtime_error(const char *message_)
-			: parent_(message_)
-		{	// construct from message string
-		}
-	};
-#pragma warning(pop)
-
-	// nano lib
-	namespace nano {
-
-		using namespace ::std;
-		using namespace ::std::string_view_literals;
-
-
-		template< typename C >
-		inline ::dbj::exception terror ( basic_string_view<C> msg_ ) {
-			return ::dbj::runtime_error(
-				transform_to<string>(msg_)
-			);
-		}
-
-		template< typename C >
-		inline ::dbj::exception terror(basic_string<C> msg_) {
-			return terror(basic_string_view<C>( msg_.c_str())  );
-		}
-
-		template< typename C, size_t N >
-		inline ::dbj::exception terror(const C (&msg_)[N] ) {
-			return terror(basic_string_view<C>(msg_));
-		}
-
-
-		template< typename C >
-		inline std::basic_string<C> prefix(
-			std::basic_string_view<C> pre, 
-			std::basic_string_view<C> post
-		)
-		{
-			return std::basic_string<C>(pre.data()).append(post.data());
-		}
-
-		// https://en.cppreference.com/w/cpp/io/clog
-		template< typename ... Args>
-		inline void log( Args && ... rest) {
-			if constexpr ((sizeof ... (rest)) > 0) {
-				(std::wclog << ... << rest);
-			}
-		}
-	} // nano
 
 	namespace win {
 
 		using namespace ::std;
 
+		/*
+		make get last error into automatic get/set to 0
+
+		::dbj::win::last_error last ;
+		auto last_err = last() ;
+
+		or simply
+
+		auto last_err = (::dbj::win::last_error)() ;
+		*/
 		struct last_error  final {
 			last_error() { }
 			~last_error() { ::SetLastError(0); }
@@ -173,6 +38,9 @@ namespace dbj {
 		// return instance of std::system_error
 		// which for MSVC STL delivers win32 last error message
 		// by calling what() on it
+		//
+		// auto last_err_msg = error_instance().what() ;
+		//
 		inline auto error_instance ( ) 
 			->  system_error
 		{
@@ -186,27 +54,30 @@ namespace dbj {
 
 		class dll_load final
 		{
+			HINSTANCE			dll_handle_{};
+			std::string		    dll_name_{};
+			bool				is_system_module{ true };
+
 			dll_load() {}
 		public:
 			explicit dll_load (
-				wstring_view dll_file_name_, 
-				bool system_mod = false
+				string_view dll_file_name_, 
+				bool system_mod = true
 			)
-				: dll_handle_(NULL), dll_name_(dll_file_name_.data()), is_system_module(system_mod)
+				: dll_handle_(NULL), 
+				  dll_name_(dll_file_name_.data()), 
+				  is_system_module(system_mod)
 			{
 				if (dll_name_.empty()) throw 
 					nano::terror (
-						(__FUNCSIG__
-						" needs dll or exe name as the first argument")
+					"dll_load(), needs dll or exe name as the first argument"sv
 					);
 
-				if (! is_system_module) {
-					dll_name_ =  L".\\" + dll_name_ ;
-				}
 				// address of filename of executable module 
-				dll_handle_ = ::LoadLibraryW(dll_name_.c_str());
+				dll_handle_ = ::LoadLibraryA(dll_name_.c_str());
+
 				if (NULL == dll_handle_) throw nano::terror(
-					 L" Could not find the DLL named: " + dll_name_
+					 " Could not find the DLL named: " + dll_name_
 					);
 			}
 			/*
@@ -217,13 +88,13 @@ namespace dbj {
 			~dll_load()
 			{
 				if (NULL != dll_handle_)
-					if (!FreeLibrary(dll_handle_))
+					if (!::FreeLibrary(dll_handle_))
 					{
 						system_error sys_e_ = error_instance();
 						nano::log(
-						L"\ndbj::dll_load::FreeLibrary failed. DLL name was " 
+						L"\ndbj::dll_load::FreeLibrary failed. DLL name is: " 
 						, dll_name_
-						, "\nlast win32 error is:", sys_e_.what() );
+						, "\nlast win32 error is:\t", sys_e_.what() );
 					}
 			}
 
@@ -232,43 +103,40 @@ namespace dbj {
 			returns null or function pointer to the one requested
 			*/
 			template< typename AFT>
-			AFT get_function(wstring_view funName)
+			AFT get_function(string_view funName)
 			{
-				FARPROC result = NULL;
+				_ASSERTE(NULL != dll_handle_);
 				// GetProcAddress
 				// has no unicode equivalent
-				_ASSERTE(NULL != dll_handle_);
-					result =
+				FARPROC result =
 					::GetProcAddress(
 					(HMODULE)dll_handle_,  // handle to DLL module 
-						nano::transform_to<string>( funName ).c_str()
+						funName.data()
 						// name of a function 
 					);
 				return (AFT)result;
 			}
 
-		protected:
-			HINSTANCE			dll_handle_;
-			std::wstring		dll_name_;
-			bool				is_system_module = false;
-		};
 
+		};
+#if 0
 		/* second argument if true means 'system dll is required' */
-		inline auto dll_dyna_load( wstring_view dll_, bool is_system_dll = false )
+		inline auto dll_dyna_load
+		( string_view dll_, bool is_system_dll = true )
 		{
 			return ::dbj::win::dll_load(dll_, is_system_dll);
 		}
-
+#endif
 		/*  or do it all function,	AFT = Actual Function Type			*/
 		template< typename AFT>
-		inline AFT dll_call(
-			wstring_view dll_, wstring_view fun_, 
-			bool is_system_dll = false)
+		inline AFT dll_dyna_load(
+			string_view dll_, string_view fun_, 
+			bool is_system_dll = true)
 		{
 			return 
-				::dbj::win::dll_load(dll_, is_system_dll).get_function<AFT>(fun_) ;
+				::dbj::win::dll_load(dll_, is_system_dll)
+				.get_function<AFT>(fun_) ;
 		}
-
 	} // win
 } // dbj
 

@@ -1,10 +1,12 @@
 
 #include "dbj_dll_call.h"
 
-namespace {
+namespace testing_testing_123  
+{
+	using namespace ::std;
+	using namespace ::std::string_literals;
+	using namespace ::std::string_view_literals;
 /*
-Please remeber -- dbj runtime error  is thrown on any error
-	
 NOTE: we could make the test function a template and receive
 beeper in where the Bepp function usage will be
 encapsulated, etc. But here we are just testing the
@@ -31,35 +33,32 @@ inline auto beeper (BOOL(*beepFunction) (DWORD, DWORD) )
 		::wprintf(L"\t{F = %6d , D = %6d}", frequency, duration);
 
 		if (0 == beepFunction(frequency, duration)) {
-			dbj::nano::log(L" FAILED ?");
+			dbj::nano::log(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}
 		frequency -= f_step;
 	} while (frequency > 0);
 	};
 
-	using namespace ::std;
-	using namespace ::std::string_literals;
-	using namespace ::std::string_view_literals;
+template<typename F>
+inline void test_dbj_dll_call 
+	(	string_view dll_ , string_view fun_ , F test_fun )
+{
+	if (
+		// load the dll + get the function
+		// third argument if true means 'user dll is required' 
+		auto  fp = dbj::win::dll_dyna_load<BeepFP>(dll_, fun_)
+		;fp // note: C++17 if() syntax
+	) {
+			::dbj::nano::log("\nCalling the function: ",	fun_.data(), ",\nwith signature ", typeid(fp).name(), "\nfrom a dll: ", dll_.data());
+		test_fun(fp);
+	} else {
+		throw dbj::nano::terror(
+			dbj::nano::prefix(fun_ , " -- Function not found?"sv )
+		);
+	}
+}; // test_dbj_dll_call
 
-	template<typename F>
-	inline void test_dbj_dll_call 
-		(	wstring dll_ , wstring fun_ , F test_fun )
-	{
-		// note: bellow is a C++17 if() syntax
-			if (
-				// load the dll + get the function
-				// third argument if true means 'system dll is required' 
-				BeepFP  fp = dbj::win::dll_call<BeepFP>(dll_, fun_, true);
-				fp 
-			) {
-				::wprintf(L"\nTesting function %s '%S', from '%s'\n",
-					fun_.data(), typeid(fp).name(), dll_.data());
-				test_fun(fp);
-			} else {
-				throw dbj::nano::terror(fun_ + L" -- Function not found?");
-			}
-	}; // test_dbj_dll_call
 } 
 
 /*
@@ -77,8 +76,9 @@ static void try_get_geo_infoex()
 		int (*)( PWSTR ,GEOTYPE, PWSTR ,int);
 	// direct use
 	try {
-		GGIEX  fp = dbj::win::dll_call<GGIEX>(
-			L"kernel32.dll", L"GetGeoInfoEx", true
+		// if dll is not found exception is thrown
+		auto  fp = dbj::win::dll_dyna_load<GGIEX>(
+			"kernel32.dll", "GetGeoInfoEx"
 			);
 
 		// if dll is found but function inside
@@ -88,29 +88,40 @@ static void try_get_geo_infoex()
 		// else use it
 	}
 	catch (dbj::exception & x) {
-		dbj::nano::log("\n\nException while looking for GetGeoInfoEx in kernel32.dll\n\n"
+		dbj::nano::log
+		("\n\nException while looking for GetGeoInfoEx in kernel32.dll\n\n"
 		, x.what() );
 	}
 }
 
-int wmain(int argc, const wchar_t * argv[], wchar_t * envp) {
+/*
+On VISTA or above there is no reason not to use wmain()
+*/
+int wmain(int argc, const wchar_t * argv[], wchar_t * envp) 
+{
+	using namespace ::std;
+	using namespace ::std::string_literals;
+	using namespace ::std::string_view_literals;
 
-	using namespace dbj::nano; 
-	dbj::nano::log("\n", argv[0] , "\n" );
+	using ::dbj::nano::log ; 
+	log("\n", argv[0] , "\n" );
 	int exit_code = EXIT_SUCCESS;
 
 	try {
+		// test the direct use
 		try_get_geo_infoex();
-		// direct use
-		BeepFP  fp = dbj::win::dll_call<BeepFP>(L"kernel32.dll", L"Beep", true);
-		fp(1000, 1000);
-		// or
-		// using a fancy test unit
-		test_dbj_dll_call(L"kernel32.dll"s, L"Beep"s, beeper );
+		// or use a fancy test unit
+		testing_testing_123::test_dbj_dll_call
+		 ("kernel32.dll"sv, "Beep"sv, testing_testing_123::beeper );
+	}
+	catch ( const dbj::exception & rex )
+	{
+		log( "\ndbj exception:\n\t", rex.what() );
+		exit_code = EXIT_FAILURE;
 	}
 	catch ( const std::exception & rex )
 	{
-		log( L"\nRun time exception: ", rex.what() );
+		log( "\nstd exception:\n\t", rex.what() );
 		exit_code = EXIT_FAILURE;
 	}
 	catch (...)
