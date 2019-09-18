@@ -2,8 +2,11 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="src\dbj_dll_call.h" />
+    <ClInclude Include="logc\src\log.h" />
+    <ClInclude Include="dbj_file_handle.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\test.cpp" />
+    <ClCompile Include="logc\src\log.c" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,9 @@
 
 #include "dbj_dll_call.h"
+#include "..//dbj_file_handle.h"
+
+#include "..//logc/src/log.h"
+#include "..//..//dbj_cpplog/src/filelog.h"
 
 namespace testing_testing_123  
 {
@@ -62,57 +66,31 @@ inline void test_dbj_dll_call
 
 } 
 
-/*
-		return ::GetGeoInfoEx(
-				(PWSTR)location,
-				(GEOTYPE)query,
-				(PWSTR)geoData,
-				(int)geoDataCount
-			);
-			exist in kernel32.dll but only above W10 REDSTONE 3
-*/
-static void try_get_geo_infoex()
-{
-	using GGIEX = 
-		int (*)( PWSTR ,GEOTYPE, PWSTR ,int);
-	// direct use
-	try {
-		// if dll is not found exception is thrown
-		auto fp = dbj::win::dll_dyna_load<GGIEX>(
-			"kernel32.dll", "GetGeoInfoEx"
-			);
-
-		// if dll is found but function inside
-		// it is not found, fp is nullptr
-		if (nullptr == fp) return;
-
-		// else use it
-	}
-	catch (std::exception & x) {
-		dbj::win::log
-		("\n\nException while looking for GetGeoInfoEx in kernel32.dll\n\n"
-		, x.what() );
-	}
-}
-
-/*
-On VISTA or above there is no reason not to use wmain()
-*/
-// int wmain(int argc, const wchar_t * argv[], wchar_t * envp) 
 int main(int argc, const char * argv[], char * envp) 
 {
 	using namespace ::std;
 	using namespace ::std::string_literals;
 	using namespace ::std::string_view_literals;
 
+	dbj::FH f_help("d:\\yetanotherlog.txt");
+
+	log_set_fp( f_help.file_ptr() );
+
+	log_trace("Log  TRACE");
+	log_debug("Log  DEBUG");
+	log_info("Log  INFO");
+	log_warn("Log  WARN");
+	log_error("Log  ERROR");
+	log_fatal("Log  FATAL");
+
+
 	using ::dbj::win::log ; 
-	log("\n", argv[0] , "\n" );
+	
+	log_info("\n", argv[0] , "\n" );
+
 	int exit_code = EXIT_SUCCESS;
 
 	try {
-		// test the direct use
-		try_get_geo_infoex();
-
 		// or use a fancy test unit
 		DBJ_REPEAT(3) {
 			testing_testing_123::test_dbj_dll_call
@@ -121,15 +99,14 @@ int main(int argc, const char * argv[], char * envp)
 	}
 	catch ( const std::exception & rex )
 	{
-		log( "\ndbj exception:\n\t", rex.what() );
+		log_error( "\ndbj exception:\n\t", rex.what() );
 		exit_code = EXIT_FAILURE;
 	}
 	catch ( ... )
 	{
-		log( "\nUnknown exception:\n\t" );
+		log_error( "\nUnknown exception:\n\t" );
 		exit_code = EXIT_FAILURE;
 	}
 
-	log("\n");
 	return exit_code;
 }
