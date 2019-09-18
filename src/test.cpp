@@ -22,18 +22,19 @@ This parameter must be in the range 37 through 32,767 (0x25 through 0x7FFF).
 	
 typedef BOOL(*BeepFP) (DWORD, DWORD);
 
-inline auto beeper (BOOL(*beepFunction) (DWORD, DWORD) ) 
+// inline auto beeper (BOOL(*beepFunction) (DWORD, DWORD) ) 
+inline auto beeper (BeepFP beepFunction )
 {
 	_ASSERTE(beepFunction);
 
-	DWORD frequency = 2400, duration = 100 ; // max is 32765;
+	DWORD frequency = 300, duration = 100 ; // max is 32765;
 	const UINT f_step = 50, d_step = 50 ;
 
 	do {
 		::wprintf(L"\t{F = %6d , D = %6d}", frequency, duration);
 
 		if (0 == beepFunction(frequency, duration)) {
-			dbj::nano::log(__FUNCSIG__ "beepFunction() FAILED ?");
+			dbj::win::log(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}
 		frequency -= f_step;
@@ -50,11 +51,11 @@ inline void test_dbj_dll_call
 		auto  fp = dbj::win::dll_dyna_load<BeepFP>(dll_, fun_)
 		;fp // note: C++17 if() syntax
 	) {
-			::dbj::nano::log("\nCalling the function: ",	fun_.data(), ",\nwith signature ", typeid(fp).name(), "\nfrom a dll: ", dll_.data());
+			::dbj::win::log("\nCalling the function: ",	fun_.data(), ",\nwith signature ", typeid(fp).name(), "\nfrom a dll: ", dll_.data());
 		test_fun(fp);
 	} else {
-		throw dbj::nano::terror(
-			dbj::nano::prefix(fun_ , " -- Function not found?"sv )
+		throw std::runtime_error(
+			std::string(fun_.data()).append( " -- Function not found?").c_str()
 		);
 	}
 }; // test_dbj_dll_call
@@ -68,7 +69,7 @@ inline void test_dbj_dll_call
 				(PWSTR)geoData,
 				(int)geoDataCount
 			);
-			exist in kernel32.dll but only above W10 RESTONE 3
+			exist in kernel32.dll but only above W10 REDSTONE 3
 */
 static void try_get_geo_infoex()
 {
@@ -87,8 +88,8 @@ static void try_get_geo_infoex()
 
 		// else use it
 	}
-	catch (dbj::exception & x) {
-		dbj::nano::log
+	catch (std::exception & x) {
+		dbj::win::log
 		("\n\nException while looking for GetGeoInfoEx in kernel32.dll\n\n"
 		, x.what() );
 	}
@@ -97,36 +98,35 @@ static void try_get_geo_infoex()
 /*
 On VISTA or above there is no reason not to use wmain()
 */
-int wmain(int argc, const wchar_t * argv[], wchar_t * envp) 
+// int wmain(int argc, const wchar_t * argv[], wchar_t * envp) 
+int main(int argc, const char * argv[], char * envp) 
 {
 	using namespace ::std;
 	using namespace ::std::string_literals;
 	using namespace ::std::string_view_literals;
 
-	using ::dbj::nano::log ; 
+	using ::dbj::win::log ; 
 	log("\n", argv[0] , "\n" );
 	int exit_code = EXIT_SUCCESS;
 
 	try {
 		// test the direct use
 		try_get_geo_infoex();
+
 		// or use a fancy test unit
-		testing_testing_123::test_dbj_dll_call
-		 ("kernel32.dll"sv, "Beep"sv, testing_testing_123::beeper );
+		DBJ_REPEAT(3) {
+			testing_testing_123::test_dbj_dll_call
+			("kernel32.dll"sv, "Beep"sv, testing_testing_123::beeper);
+		}
 	}
-	catch ( const dbj::exception & rex )
+	catch ( const std::exception & rex )
 	{
 		log( "\ndbj exception:\n\t", rex.what() );
 		exit_code = EXIT_FAILURE;
 	}
-	catch ( const std::exception & rex )
+	catch ( ... )
 	{
-		log( "\nstd exception:\n\t", rex.what() );
-		exit_code = EXIT_FAILURE;
-	}
-	catch (...)
-	{
-		log(L"\nUnknown exception: ");
+		log( "\nUnknown exception:\n\t" );
 		exit_code = EXIT_FAILURE;
 	}
 

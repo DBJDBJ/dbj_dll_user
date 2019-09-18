@@ -1,16 +1,9 @@
 #pragma once
-/* Copyright 2017-2018 dbj@dbj.org
+/* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
-Licensed under the GPL License, Version 3.0 (the "License");
-you may not use this file except in compliance with the License.
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-#include "dbj_nano_lib.h"
+#include "..//dbj--nanolib/dbj++nanolib.h"
+#include <exception>
+#include <iostream>
 
 namespace dbj {
 
@@ -18,38 +11,12 @@ namespace dbj {
 
 		using namespace ::std;
 
-		/*
-		make get last error into automatic get/set to 0
-
-		::dbj::win::last_error last ;
-		auto last_err = last() ;
-
-		or simply
-
-		auto last_err = (::dbj::win::last_error)() ;
-		*/
-		struct last_error  final {
-			last_error() { }
-			~last_error() { ::SetLastError(0); }
-			int operator() () const noexcept {
-				return (int)::GetLastError();
+		// https://en.cppreference.com/w/cpp/io/clog
+		template< typename ... Args>
+		inline void log(Args&& ... rest) {
+			if constexpr ((sizeof ... (rest)) > 0) {
+				(std::clog << ... << rest);
 			}
-		};
-		// return instance of std::system_error
-		// which for MSVC STL delivers win32 last error message
-		// by calling what() on it
-		//
-		// auto last_err_msg = error_instance().what() ;
-		//
-		inline auto error_instance ( ) 
-			->  system_error
-		{
-			last_error last;
-#ifdef _MSC_VER
-			return std::system_error( error_code( last(), _System_error_category() ));
-#else
-			return std::system_error(error_code(last(), system_category()));
-#endif
 		}
 
 /*
@@ -72,14 +39,14 @@ public:
 			is_system_module(system_mod)
 	{
 		if (dll_name_.empty()) throw 
-			nano::terror (
-			"dll_load(), needs dll or exe name as the first argument"sv
+			std::runtime_error (
+			"dll_load(), needs dll or exe name as the first argument"
 			);
 
 		// address of filename of executable module 
 		dll_handle_ = ::LoadLibraryA(dll_name_.c_str());
 
-		if (NULL == dll_handle_) throw nano::terror(
+		if (NULL == dll_handle_) throw std::runtime_error (
 				" Could not find the DLL named: " + dll_name_
 			);
 	}
@@ -93,11 +60,13 @@ public:
 		if (NULL != dll_handle_)
 			if (!::FreeLibrary(dll_handle_))
 			{
-				system_error sys_e_ = error_instance();
-				nano::log(
+
+				std::error_code ec(::GetLastError(), std::system_category());
+
+				log(
 				L"\ndbj::dll_load::FreeLibrary failed. DLL name is: " 
 				, dll_name_
-				, "\nlast win32 error is:\t", sys_e_.what() );
+				, "\nlast win32 error is:\t", ec.message().c_str() );
 			}
 	}
 
