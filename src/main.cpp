@@ -3,7 +3,9 @@
 #include "..//dbj_file_handle.h"
 
 #include "..//logc/src/log.h"
-#include "..//..//dbj_cpplog/src/filelog.h"
+
+#define DBJ_FILE_LINE  __FILE__ "(" _CRT_STRINGIZE(__LINE__) ")"
+
 
 namespace testing_testing_123  
 {
@@ -35,10 +37,10 @@ inline auto beeper (BeepFP beepFunction )
 	const UINT f_step = 50, d_step = 50 ;
 
 	do {
-		::wprintf(L"\t{F = %6d , D = %6d}", frequency, duration);
+		log_info(" {F = %6d, D = %6d}", frequency, duration);
 
 		if (0 == beepFunction(frequency, duration)) {
-			dbj::win::log(__FUNCSIG__ "beepFunction() FAILED ?");
+			log_error(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}
 		frequency -= f_step;
@@ -52,29 +54,48 @@ inline void test_dbj_dll_call
 	if (
 		// load the dll + get the function
 		// third argument if true means 'user dll is required' 
-		auto  fp = dbj::win::dll_dyna_load<BeepFP>(dll_, fun_)
+		auto  fp = dbj::win::dll_call<BeepFP>(dll_, fun_)
 		;fp // note: C++17 if() syntax
 	) {
-			::dbj::win::log("\nCalling the function: ",	fun_.data(), ",\nwith signature ", typeid(fp).name(), "\nfrom a dll: ", dll_.data());
+			log_info("\nCalling the function: %s,\nwith signature %s\nfrom a dll: %s", fun_.data(), typeid(fp).name(), dll_.data());
 		test_fun(fp);
-	} else {
-		throw std::runtime_error(
-			std::string(fun_.data()).append( " -- Function not found?").c_str()
-		);
 	}
+	else {
+		log_warn("Calling function: %s, from a dll: %s, failed!", fun_.data(), dll_.data());
+	}
+
 }; // test_dbj_dll_call
 
 } 
 
+
+#include <string.h>
+// quick and dirty
+std::string log_file_name( char const * full_exe_path ) 
+{
+	char const * basename = ::strrchr(full_exe_path, '\\');
+	return std::string(basename).append(".log.txt");
+}
+/*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, const char * argv[], char * envp) 
 {
 	using namespace ::std;
 	using namespace ::std::string_literals;
 	using namespace ::std::string_view_literals;
 
-	dbj::FH f_help("d:\\yetanotherlog.txt");
+	auto [file_handle, status] = dbj::FH::make(log_file_name(argv[0]));
 
-	log_set_fp( f_help.file_ptr() );
+	if (!file_handle) {
+		log_error( dbj::FH::err_message( status) );
+		return EXIT_FAILURE;
+	}
+
+	dbj::simplelog::enable_vt_mode();
+  	dbj::simplelog::log_set_fp( file_handle->file_ptr() );
+
+#pragma region setup and test log in an MT mode
+
+	dbj::simplelog::mt::setup();
 
 	log_trace("Log  TRACE");
 	log_debug("Log  DEBUG");
@@ -83,30 +104,26 @@ int main(int argc, const char * argv[], char * envp)
 	log_error("Log  ERROR");
 	log_fatal("Log  FATAL");
 
+#pragma endregion
 
-	using ::dbj::win::log ; 
-	
-	log_info("\n", argv[0] , "\n" );
+
+	log_info("\nLog file used is: %s\n", log_file_name(argv[0]).c_str() );
 
 	int exit_code = EXIT_SUCCESS;
 
-	try {
-		// or use a fancy test unit
-		DBJ_REPEAT(3) {
+	// no try/catch
+
+	// provoke error
+	testing_testing_123::test_dbj_dll_call
+	("kernel32.dll"sv, "Humpty Dumpty"sv, testing_testing_123::beeper);
+
+		auto R = 3U;
+		while (R--) {
 			testing_testing_123::test_dbj_dll_call
 			("kernel32.dll"sv, "Beep"sv, testing_testing_123::beeper);
 		}
-	}
-	catch ( const std::exception & rex )
-	{
-		log_error( "\ndbj exception:\n\t", rex.what() );
-		exit_code = EXIT_FAILURE;
-	}
-	catch ( ... )
-	{
-		log_error( "\nUnknown exception:\n\t" );
-		exit_code = EXIT_FAILURE;
-	}
+
+	
 
 	return exit_code;
 }

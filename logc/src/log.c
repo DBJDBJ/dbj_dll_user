@@ -34,7 +34,7 @@ typedef int errno_t;
 
 static struct {
   void *udata;
-  log_LockFn lock;
+  log_lock_function_ptr lock;
   FILE *fp;
   int level;
   int quiet;
@@ -71,7 +71,7 @@ void log_set_udata(void *udata) {
 }
 
 
-void log_set_lock(log_LockFn fn) {
+void log_set_lock(log_lock_function_ptr fn) {
   L.lock = fn;
 }
 
@@ -91,13 +91,12 @@ void log_set_quiet(int enable) {
 }
 
 
-void log_log(int level, const char *file, int line, const char *fmt, ...) {
-  if (level < L.level) {
-    return;
-  }
-
-  /* Acquire lock */
-  lock();
+void log_log(int level, const char *file, int line, const char *fmt, ...) 
+{
+	/* Acquire lock */
+	lock();
+	
+	if (level < L.level)   goto exit;
 
   /* Get current time */
   time_t t = time(NULL);
@@ -136,6 +135,36 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
     fflush(L.fp);
   }
 
+  exit :;
   /* Release lock */
   unlock();
+}
+
+#define STRICT
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+bool enable_vt_mode()
+{
+	// Set output mode to handle virtual terminal sequences
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hOut == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+
+		// this will fail if this app output is 
+		// redirected to a file
+		DWORD dwMode = 0;
+		if (!GetConsoleMode(hOut, &dwMode))
+		{
+			return false;
+		}
+
+		dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		if (!SetConsoleMode(hOut, dwMode))
+		{
+			return false;
+		}
+		return true;
 }

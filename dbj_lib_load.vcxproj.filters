@@ -6,7 +6,11 @@
     <ClInclude Include="dbj_file_handle.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\test.cpp" />
     <ClCompile Include="logc\src\log.c" />
+    <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="logc\test_for_colors.cmd" />
+    <None Include="logc\turnon_vt100_colors.reg" />
   </ItemGroup>
 </Project>
