@@ -75,6 +75,8 @@ int main(int argc, const char * argv[], char * envp)
 	using namespace ::std::string_literals;
 	using namespace ::std::string_view_literals;
 
+	tempo_test::now();
+
 	auto lfn = dbj::simplelog::app_to_log_file_name(argv[0]);
 
 	auto [file_handle, status] = dbj::FH::make( lfn );

@@ -13,17 +13,11 @@
 namespace tempo_test {
 
 	inline void now() {
-
 		using posix = dbj::nanolib::posix_retval_service;
-		auto one = DBJ_STATUS( posix, std::errc::already_connected );
-		auto two = DBJ_RETVAL_ERR(posix, bool, std::errc::already_connected);
-
-		using bool_ret = typename dbj::nanolib::return_type<bool>;
-		auto three = bool_ret{ { true }, {} };
-
-		auto four = // DBJ_RETVAL_INFO(dbj::nanolib::posix_retval_service, std::string("string"), "OK");
-
-			dbj::nanolib::return_type<bool>{ { true }, { posix::make_status("Jupi!" , __FILE__, __LINE__) } };
+		auto one	= DBJ_STATUS( posix, std::errc::already_connected );
+		auto two	= DBJ_RETVAL_ERR(posix, bool, std::errc::already_connected);
+		auto three	= DBJ_RETVAL_OK( posix, true );
+		auto four	= DBJ_RETVAL_FULL(posix, std::string("string"), "OK");
 	}
 }
 
