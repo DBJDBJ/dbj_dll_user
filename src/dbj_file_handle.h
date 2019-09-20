@@ -1,3 +1,4 @@
+/* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 #pragma once
 #ifndef _DBJ_FILE_HANDLE_INC_
 #define _DBJ_FILE_HANDLE_INC_
@@ -7,10 +8,29 @@
 #include <string>
 #include <optional>
 
+#include "../../dbj--nanolib/dbj++status.h"
+
+namespace tempo_test {
+
+	inline void now() {
+
+		using posix = dbj::nanolib::posix_retval_service;
+		auto one = DBJ_STATUS( posix, std::errc::already_connected );
+		auto two = DBJ_RETVAL_ERR(posix, bool, std::errc::already_connected);
+
+		using bool_ret = typename dbj::nanolib::return_type<bool>;
+		auto three = bool_ret{ { true }, {} };
+
+		auto four = // DBJ_RETVAL_INFO(dbj::nanolib::posix_retval_service, std::string("string"), "OK");
+
+			dbj::nanolib::return_type<bool>{ { true }, { posix::make_status("Jupi!" , __FILE__, __LINE__) } };
+	}
+}
+
 namespace dbj {
 
 	using namespace std;
-	
+
 	// File Handle(r)
 	class FH;
 	class FH final 

@@ -1,6 +1,6 @@
-
+/* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 #include "dbj_dll_call.h"
-#include "..//dbj_file_handle.h"
+#include "dbj_file_handle.h"
 
 #include "..//logc/src/log.h"
 
@@ -14,7 +14,7 @@ namespace testing_testing_123
 	using namespace ::std::string_view_literals;
 /*
 NOTE: we could make the test function a template and receive
-beeper in where the Bepp function usage will be
+beeper in where the Beep function usage will be
 encapsulated, etc. But here we are just testing the
 dynamic dll loadin
 
@@ -68,14 +68,6 @@ inline void test_dbj_dll_call
 
 } 
 
-
-#include <string.h>
-// quick and dirty
-std::string log_file_name( char const * full_exe_path ) 
-{
-	char const * basename = ::strrchr(full_exe_path, '\\');
-	return std::string(basename).append(".log.txt");
-}
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, const char * argv[], char * envp) 
 {
@@ -83,7 +75,9 @@ int main(int argc, const char * argv[], char * envp)
 	using namespace ::std::string_literals;
 	using namespace ::std::string_view_literals;
 
-	auto [file_handle, status] = dbj::FH::make(log_file_name(argv[0]));
+	auto lfn = dbj::simplelog::app_to_log_file_name(argv[0]);
+
+	auto [file_handle, status] = dbj::FH::make( lfn );
 
 	if (!file_handle) {
 		log_error( dbj::FH::err_message( status) );
@@ -107,7 +101,7 @@ int main(int argc, const char * argv[], char * envp)
 #pragma endregion
 
 
-	log_info("\nLog file used is: %s\n", log_file_name(argv[0]).c_str() );
+	log_info("\nLog file used is: %s\n", lfn.c_str() );
 
 	int exit_code = EXIT_SUCCESS;
 

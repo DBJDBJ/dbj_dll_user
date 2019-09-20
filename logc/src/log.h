@@ -103,6 +103,25 @@ namespace dbj::simplelog {
 		*/
 	} // mt
 
+#ifdef _MSC_VER
+#define DBJ_PATH_DELIM '\\'
+#else
+#define DBJ_PATH_DELIM '/'
+#endif
+
+	std::string app_to_log_file_name (
+		std::string_view full_exe_path,
+		char const * const suffix = ".log.txt"
+		)
+	{
+		auto pos_ = full_exe_path.find_last_of(DBJ_PATH_DELIM);
+		if (pos_ == full_exe_path.npos) return {};
+		auto basename = full_exe_path.substr(pos_);
+		return std::string{ basename.data() }.append(suffix);
+	}
+
+#undef DBJ_PATH_DELIM
+
 } // namespace dbj::simplelog;
 
 #endif //  __cplusplus
