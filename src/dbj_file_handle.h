@@ -9,64 +9,71 @@
 #include <optional>
 
 #include "../../dbj--nanolib/dbj++status.h"
+#include "../../dbj--nanolib/dbj++tu.h"
 
+#ifdef TESTING_DBJ_RETVALS
 namespace tempo_test {
 
 	inline void now() {
 		using posix = dbj::nanolib::posix_retval_service;
-		auto one	= DBJ_STATUS( posix, std::errc::already_connected );
-		auto two	= DBJ_RETVAL_ERR(posix, bool, std::errc::already_connected);
-		auto three	= DBJ_RETVAL_OK( posix, true );
-		auto four	= DBJ_RETVAL_FULL(posix, std::string("string"), "OK");
+		DBJ_TX(DBJ_STATUS(posix, std::errc::already_connected));
+		DBJ_TX(DBJ_STATUS(posix, "Wowza!"));
+
+		DBJ_TX(DBJ_RETVAL_ERR(posix, std::nullptr_t, std::errc::already_connected));
+		DBJ_TX(DBJ_RETVAL_OK(4 + 2 * 3));
+		DBJ_TX(DBJ_RETVAL_FULL(posix, std::string("string"), "OK"));
 	}
 }
+#endif // TESTING_DBJ_RETVALS
 
 namespace dbj {
 
 	using namespace std;
 
 	// File Handle(r)
-	class FH;
-	class FH final 
+	class FH final
 	{
-	public:
-		enum class error { OPEN_PROBLEM, UNKNOWN_DEVICE };
-		using return_type = std::pair< optional<FH>, optional<error> >;
-
-		static char const * err_message( optional<error> & rt ) noexcept
-		{
-			if (!rt) return "Status is empty";
-
-			if (*rt == error::OPEN_PROBLEM) return "Error while opening the file";
-			if (*rt == error::UNKNOWN_DEVICE) return "Unknown device error";
-			return "Unknown status";
-		}
-	private:
 		std::string name_;
 		int file_descriptor_ = -1;
 
 		FH(const char* filename, int descriptor_)
 			: name_(filename), file_descriptor_(descriptor_)
 		{
-		}
-		// static return_type make(const char* filename);
-	public:
-		
-		static return_type make(std::string_view filename)
-		{
-			return make(filename.data());
+			/* only make can reach here */
 		}
 
-		static return_type make( const char* filename) 
+	public:
+		/*
+		reference_wraper<FH> makes possible two things
+
+		1. using yet not fully defined class
+		2. using type which is not copyable and/or moveable
+		*/
+		using return_type = typename dbj::nanolib::return_type< reference_wrapper<FH> >;
+		/*
+		return type is { { FH }, { json string } }
+		*/
+		[[nodiscard]] static decltype(auto) make(const char* filename)
 		{
+			using posix = dbj::nanolib::posix_retval_service;
+
 			const char* fn = filename;
 
 			_ASSERTE(fn);
 			//			fn = "/dev/null";
-			int fd = _open(fn, O_WRONLY | O_APPEND | O_CREAT, _S_IREAD | _S_IWRITE);
+			int fd = -1;
+			errno_t rez = _sopen_s(&fd, fn, O_WRONLY | O_APPEND | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE);
 
-			if (fd < 1) {
-				return { {}, { error::OPEN_PROBLEM } };
+			if (rez != 0) {
+				/*
+errno value	Condition
+EACCES	The given path is a directory, or the file is read-only, but an open-for-writing operation was attempted.
+EEXIST	_O_CREAT and _O_EXCL flags were specified, but filename already exists.
+EINVAL	Invalid oflag, shflag, or pmode argument, or pfh or filename was a null pointer.
+EMFILE	No more file descriptors available.
+ENOENT	File or path not found.
+				*/
+				return DBJ_RETVAL_ERR(posix, FH, std::errc(rez));
 			}
 
 			struct stat sb;
@@ -81,13 +88,20 @@ namespace dbj {
 			case S_IFREG:  //printf("regular file\n");            break;
 				break;
 			default:
-				return { {}, { error::UNKNOWN_DEVICE } };
+					return DBJ_RETVAL_ERR(posix, FH, std::errc::no_such_device );
 				break;
 			}
 
-			return { FH( filename , fd ), {} };
+			return DBJ_RETVAL_OK(FH(filename, fd));
 
 		};
+
+		[[nodiscard]] static decltype(auto) make(std::string_view filename)
+		{
+			// 1.copy FH instance
+			// 2.move FH instance
+			return dbj::nanolib::return_type<FH>(make(filename.data()));
+		}
 
 		const char* name() const noexcept { return name_.c_str(); };
 
@@ -96,6 +110,7 @@ namespace dbj {
 			_ASSERTE(file_descriptor_ > -1);
 			static FILE* file_ = _fdopen(file_descriptor_, options_);
 			_ASSERTE(file_ != nullptr);
+			_ASSERTE(0 == ferror( file_));
 			// fprintf(file, "TRA LA LA LA LA!");
 			return file_;
 		}

@@ -111,13 +111,14 @@ namespace dbj::simplelog {
 
 	std::string app_to_log_file_name (
 		std::string_view full_exe_path,
-		char const * const suffix = ".log.txt"
+		char const * const suffix = ".log"
 		)
 	{
-		auto pos_ = full_exe_path.find_last_of(DBJ_PATH_DELIM);
-		if (pos_ == full_exe_path.npos) return {};
-		auto basename = full_exe_path.substr(pos_);
-		return std::string{ basename.data() }.append(suffix);
+		//auto pos_ = full_exe_path.find_last_of(DBJ_PATH_DELIM);
+		//if (pos_ == full_exe_path.npos) return {};
+		//auto basename = full_exe_path.substr(pos_);
+		//return std::string{"."}.append( basename.data() ).append(suffix);
+		return std::string{ full_exe_path.data() }.append( suffix );
 	}
 
 #undef DBJ_PATH_DELIM
