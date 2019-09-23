@@ -11,17 +11,20 @@
 #include "../../dbj--nanolib/dbj++status.h"
 #include "../../dbj--nanolib/dbj++tu.h"
 
+#define TESTING_DBJ_RETVALS
 #ifdef TESTING_DBJ_RETVALS
 namespace tempo_test {
 
-	inline void now() {
-		using posix = dbj::nanolib::posix_retval_service;
+	inline void now() 
+	{
+		using posix = dbj::nanolib::posix_retval_service<bool> ;
+
 		DBJ_TX(DBJ_STATUS(posix, std::errc::already_connected));
 		DBJ_TX(DBJ_STATUS(posix, "Wowza!"));
 
 		DBJ_TX(DBJ_RETVAL_ERR(posix, std::nullptr_t, std::errc::already_connected));
-		DBJ_TX(DBJ_RETVAL_OK(4 + 2 * 3));
-		DBJ_TX(DBJ_RETVAL_FULL(posix, std::string("string"), "OK"));
+		DBJ_TX(DBJ_RETVAL_OK( posix, true ));
+		DBJ_TX(DBJ_RETVAL_FULL(posix, true, "OK"));
 	}
 }
 #endif // TESTING_DBJ_RETVALS
@@ -50,13 +53,12 @@ namespace dbj {
 		2. using type which is not copyable and/or moveable
 		*/
 		using return_type = typename dbj::nanolib::return_type< reference_wrapper<FH> >;
+		using posix = dbj::nanolib::posix_retval_service< FH >;
 		/*
 		return type is { { FH }, { json string } }
 		*/
 		[[nodiscard]] static decltype(auto) make(const char* filename)
 		{
-			using posix = dbj::nanolib::posix_retval_service;
-
 			const char* fn = filename;
 
 			_ASSERTE(fn);
@@ -92,7 +94,7 @@ ENOENT	File or path not found.
 				break;
 			}
 
-			return DBJ_RETVAL_OK(FH(filename, fd));
+			return DBJ_RETVAL_OK( posix, FH(filename, fd));
 
 		};
 
