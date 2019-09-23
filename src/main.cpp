@@ -1,17 +1,21 @@
 /* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 #include "dbj_dll_call.h"
 #include "dbj_file_handle.h"
+#include "..//binary_tree.h"
+
+#include "..//fp_shenanigans.h"
 
 #include "..//logc/src/log.h"
 
 #define DBJ_FILE_LINE  __FILE__ "(" _CRT_STRINGIZE(__LINE__) ")"
 
+using namespace ::std;
+using namespace ::std::string_literals;
+using namespace ::std::string_view_literals;
 
-namespace testing_testing_123
+namespace 
 {
-	using namespace ::std;
-	using namespace ::std::string_literals;
-	using namespace ::std::string_view_literals;
+
 	/*
 	NOTE: we could make the test function a template and receive
 	beeper in where the Beep function usage will be
@@ -75,16 +79,15 @@ namespace testing_testing_123
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, const char* argv[], char* envp)
 {
-	using namespace ::std;
-	using namespace ::std::string_literals;
-	using namespace ::std::string_view_literals;
-
+	faux_fp::test(argc, argv);
+#ifdef TESTING_DBJ_BTREE
+	dbj_tree_research::simple_tree_test();
+#endif
 #ifdef TESTING_DBJ_RETVALS
 	tempo_test::now();
 #endif
 	// locate log file in the same folder with the exe made
 	auto lfn = dbj::simplelog::app_to_log_file_name(argv[0]);
-	// auto lfn = "d:/whatever.log"; 
 
 	auto [file_handle, status] = dbj::FH::make(lfn);
 
@@ -111,16 +114,14 @@ int main(int argc, const char* argv[], char* envp)
 #endif
 
 	// provoke error
-	testing_testing_123::test_dbj_dll_call
-	("kernel32.dll"sv, "Humpty Dumpty"sv, testing_testing_123::beeper);
+	test_dbj_dll_call
+	("kernel32.dll"sv, "Humpty Dumpty"sv, beeper);
 
 	auto R = 3U;
 	while (R--) {
-		testing_testing_123::test_dbj_dll_call
-		("kernel32.dll"sv, "Beep"sv, testing_testing_123::beeper);
+		test_dbj_dll_call
+		("kernel32.dll"sv, "Beep"sv, beeper);
 	}
-
-
-
-	return EXIT_SUCCESS;
+		return EXIT_SUCCESS;
 }
+
