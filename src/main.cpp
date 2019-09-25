@@ -1,13 +1,14 @@
 /* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
+
+//#include "..//dbj--nanolib/dbj++tu.h"
+//#include "..//dbj--nanolib/dbj++status.h"
+
+#include "..//..//dbj--nanolib/dbj++tu.h"
+#include "..//..//dbj--nanolib/dbj++status.h"
+
 #include "dbj_dll_call.h"
-#include "dbj_file_handle.h"
-#include "..//binary_tree.h"
-
 #include "..//fp_shenanigans.h"
-
-#include "..//logc/src/log.h"
-
-#define DBJ_FILE_LINE  __FILE__ "(" _CRT_STRINGIZE(__LINE__) ")"
+#include "..\..\\dbj_laboratorium\dbj++simplelog\log.h"
 
 using namespace ::std;
 using namespace ::std::string_literals;
@@ -79,29 +80,18 @@ namespace
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, const char* argv[], char* envp)
 {
-	faux_fp::test(argc, argv);
-#ifdef TESTING_DBJ_BTREE
-	dbj_tree_research::simple_tree_test();
-#endif
-#ifdef TESTING_DBJ_RETVALS
-	tempo_test::now();
-#endif
-	// locate log file in the same folder with the exe made
-	auto lfn = dbj::simplelog::app_to_log_file_name(argv[0]);
+	// the tests first
+	dbj::tu::catalog.execute();
 
-	auto [file_handle, status] = dbj::FH::make(lfn);
-
-	if (!file_handle) {
-		perror(lfn.c_str());
+	using dbj::simplelog::SETUP;
+	if (!dbj::simplelog::setup(
+		SETUP::LOG_FROM_APP_PATH | SETUP::VT100_CON | SETUP::FILE_LINE_OFF ,
+		argv[0])
+	)
 		return EXIT_FAILURE;
-	}
-
-	dbj::simplelog::mt::setup();
-	dbj::simplelog::enable_vt_mode();
-	dbj::simplelog::log_set_fp(file_handle->file_ptr());
 
 	log_trace(" %s", "=================================================================================");
-	log_trace("Starting Application: %s", argv[0]);
+	log_trace(" Starting Application: %s", argv[0]);
 	log_trace(" %s", "=================================================================================");
 
 #ifdef LOG_TESTING
