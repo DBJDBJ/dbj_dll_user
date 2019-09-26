@@ -3,12 +3,11 @@
 //#include "..//dbj--nanolib/dbj++tu.h"
 //#include "..//dbj--nanolib/dbj++status.h"
 
-#include "..//..//dbj--nanolib/dbj++tu.h"
-#include "..//..//dbj--nanolib/dbj++status.h"
+#include "..\dbj--nanolib\dbj++tu.h"
+#include "..\dbj--nanolib\dbj++status.h"
 
 #include "dbj_dll_call.h"
-#include "..//fp_shenanigans.h"
-#include "..\..\\dbj_laboratorium\dbj++simplelog\log.h"
+#include "..\dbj--simplelog\log.h"
 
 using namespace ::std;
 using namespace ::std::string_literals;
