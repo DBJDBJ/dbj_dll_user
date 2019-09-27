@@ -8,7 +8,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include "..\..\\dbj_laboratorium\dbj++simplelog\log.h"
+#include "..\dbj--simplelog\log.h"
 
 namespace dbj {
 

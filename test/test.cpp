@@ -1,13 +1,6 @@
 /* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
-//#include "..//dbj--nanolib/dbj++tu.h"
-//#include "..//dbj--nanolib/dbj++status.h"
-
-#include "..\dbj--nanolib\dbj++tu.h"
-#include "..\dbj--nanolib\dbj++status.h"
-
-#include "dbj_dll_call.h"
-#include "..\dbj--simplelog\log.h"
+#include "..\dbj_dll_call.h"
 
 using namespace ::std;
 using namespace ::std::string_literals;
@@ -20,7 +13,7 @@ namespace
 	NOTE: we could make the test function a template and receive
 	beeper in where the Beep function usage will be
 	encapsulated, etc. But here we are just testing the
-	dynamic dll loadin
+	dynamic dll loading
 
 	BOOL Beep( DWORD dwFreq,  // sound frequency, in hertz
 	DWORD dwDuration  // sound duration, in milliseconds
@@ -79,18 +72,17 @@ namespace
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, const char* argv[], char* envp)
 {
-	// the tests first
-	dbj::tu::catalog.execute();
-
 	using dbj::simplelog::SETUP;
 	if (!dbj::simplelog::setup(
-		SETUP::LOG_FROM_APP_PATH | SETUP::VT100_CON | SETUP::FILE_LINE_OFF ,
+		SETUP::LOG_FROM_APP_PATH | SETUP::VT100_CON 
+		| SETUP::FILE_LINE_OFF /*| SETUP::SILENT*/ ,
 		argv[0])
 	)
 		return EXIT_FAILURE;
 
 	log_trace(" %s", "=================================================================================");
 	log_trace(" Starting Application: %s", argv[0]);
+	log_trace(" Log file: %s", dbj::simplelog::current_log_file_path());
 	log_trace(" %s", "=================================================================================");
 
 #ifdef LOG_TESTING
