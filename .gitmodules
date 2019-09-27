@@ -1,6 +1,3 @@
-[submodule "dbj--nanolib"]
-	path = dbj--nanolib
-	url = https://github.com/dbj-systems/dbj--nanolib.git
 [submodule "dbj--simplelog"]
 	path = dbj--simplelog
 	url = https://github.com/dbj-systems/dbj--simplelog.git
