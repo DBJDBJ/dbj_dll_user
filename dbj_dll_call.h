@@ -1,9 +1,6 @@
 #pragma once
 /* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
-// #define DBJ_DLL_CALL_WINDOWS_INCLUDED
-
-#ifdef DBJ_DLL_CALL_WINDOWS_INCLUDED
 #define NOMINMAX
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define max(x, y) ((x) > (y) ? (x) : (y))
@@ -11,32 +8,34 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#else
+/*
+works without including windows with the declarations bellow 
+but this is of a limited value, for conole apps and such
+windows apps need to include windows.h anyway
+*/
+//extern "C" {
+//
+//	typedef __int64 (__stdcall* DBJ_FARPROC)();
+//	/*
+//	the declarations for dll dynamic loading
+//	*/
+//	__declspec(dllimport) void* __stdcall LoadLibraryA(
+//		const char* /*lpLibFileName*/
+//	);
+//
+//	__declspec(dllimport) int __stdcall FreeLibrary(
+//		void* /*hLibModule*/
+//	);
+//
+//	__declspec(dllimport) DBJ_FARPROC __stdcall GetProcAddress(
+//		void* /*hModule*/,
+//		const char* /*lpProcName*/
+//	);
+//
+//} // "C
+//
+//#pragma comment(lib, "kernel32.lib")
 
-extern "C" {
-
-	typedef __int64 (__stdcall* DBJ_FARPROC)();
-	/*
-	the declarations for dll dynamic loading
-	*/
-	__declspec(dllimport) void* __stdcall LoadLibraryA(
-		const char* /*lpLibFileName*/
-	);
-
-	__declspec(dllimport) int __stdcall FreeLibrary(
-		void* /*hLibModule*/
-	);
-
-	__declspec(dllimport) DBJ_FARPROC __stdcall GetProcAddress(
-		void* /*hModule*/,
-		const char* /*lpProcName*/
-	);
-
-} // "C
-
-#pragma comment(lib, "kernel32.lib")
-
-#endif // DBJ_DLL_CALL_WINDOWS_INCLUDED
 
 /// <summary>
 /// user can provide log_function(...)
@@ -57,7 +56,7 @@ namespace dbj {
 		*/
 		class dll_load final
 		{
-			/*HINSTANCE*/void *			dll_handle_ = nullptr;
+			HINSTANCE			dll_handle_ = nullptr;
 			std::string		    dll_name_{};
 			bool				is_system_module{ true };
 
@@ -101,17 +100,8 @@ namespace dbj {
 				if (this->valid())
 					if (!::FreeLibrary(dll_handle_))
 					{
-#ifdef DBJ_DLL_CALL_WINDOWS_INCLUDED
-						std::error_code ec(::GetLastError(), std::system_category());
-
-						DBJ_DLL_CALL_LOG(
-							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: "
-							"%s"
-							"\nlast win32 error is: %s", dll_name_.c_str(), ec.message().c_str());
-#else
 						DBJ_DLL_CALL_LOG(
 							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s", dll_name_.c_str());
-#endif
 					}
 			}
 
@@ -130,10 +120,10 @@ namespace dbj {
 				}
 				// GetProcAddress
 				// has no unicode equivalent
-				DBJ_FARPROC result =
+				FARPROC result =
 					::GetProcAddress(
 						// handle to DLL module 
-					(/*HMODULE*/ void *)dll_handle_,
+					( HMODULE )dll_handle_,
 						// name of a function 
 						funName.data()
 					);

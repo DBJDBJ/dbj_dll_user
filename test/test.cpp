@@ -16,12 +16,8 @@ using namespace ::std::string_view_literals;
 NOTE! be sure to declare function pointers from WIN32 DLL's
 adorning them with WINBASEAPI and WINAPI macros like here
 otherwise x86 builds will very likely fail
-
-typedef WINBASEAPI BOOL(WINAPI* BeepFP) (DWORD, DWORD);
-
-or in C++ lingo
 */
-using  BeepFP = __declspec(dllimport) int (__stdcall* ) (unsigned long, unsigned long);
+typedef WINBASEAPI BOOL(WINAPI* BeepFP) (DWORD, DWORD);
 
 void beeper(BeepFP /*beepFunction*/);
 
