@@ -44,9 +44,7 @@ Top of the test.cpp, shows how users can use thier own logging instead of
 ```
 
 dll will be properly unloaded when it's holder goes out of scope.
-For the fancy test unit please look into test.cpp.
-
-In the testing [dbj--simplelog](https://github.com/dbj-systems/dbj--simplelog) is used. 
+For the fancy test unit please look into `test.cpp`.
 
 <hr/>
 Copyright 2018 by dbj@dbj.org
