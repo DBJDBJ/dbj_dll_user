@@ -29,34 +29,10 @@ template<typename F>
 	void test_dbj_dll_call
 		(string_view /*dll_*/, string_view /*fun_*/, F /*test_fun*/);
 
-	inline int standard_simple_log_setup( const char * app_full_path ) 
-	{
-		using dbj::simplelog::SETUP;
-		if (!dbj::simplelog::setup(
-			SETUP::LOG_FROM_APP_PATH | SETUP::VT100_CON | SETUP::FILE_LINE_OFF /*| SETUP::SILENT*/,
-			app_full_path )
-			)
-			return EXIT_FAILURE;
-
-		log_trace(" %s", "=================================================================================");
-		log_trace(" Starting Application: %s", app_full_path );
-		log_trace(" Log file: %s", dbj::simplelog::current_log_file_path());
-		log_trace(" %s", "=================================================================================");
-
-#ifdef LOG_TESTING
-		log_trace("Log  TRACE");
-		log_debug("Log  DEBUG");
-		log_info("Log  INFO");
-		log_warn("Log  WARN");
-		log_error("Log  ERROR");
-		log_fatal("Log  FATAL");
-#endif
-		return EXIT_SUCCESS;
-	}
-
+	
 	int main(int argc, const char* argv[], char* envp)
 	{
-		if (EXIT_SUCCESS != standard_simple_log_setup(argv[0]))
+		if (EXIT_SUCCESS != dbj_simple_log_startup(argv[0]))
 			return EXIT_FAILURE;
 
 	// provoke error
