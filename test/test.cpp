@@ -21,7 +21,7 @@ typedef WINBASEAPI BOOL(WINAPI* BeepFP) (DWORD, DWORD);
 
 or in C++ lingo
 */
-using  BeepFP =  WINBASEAPI BOOL(WINAPI* ) (DWORD, DWORD);
+using  BeepFP = __declspec(dllimport) int (__stdcall* ) (unsigned long, unsigned long);
 
 void beeper(BeepFP /*beepFunction*/);
 
@@ -67,8 +67,8 @@ static void  beeper(BeepFP beepFunction)
 {
 	_ASSERTE(beepFunction);
 
-	DWORD frequency = 300, duration = 100; // max is 32765;
-	const UINT f_step = 50, d_step = 50;
+	unsigned long frequency = 300, duration = 100; // max is 32765;
+	const unsigned int f_step = 50, d_step = 50;
 
 	do {
 		log_info(" ::Beep(%6d, %6d)", frequency, duration);

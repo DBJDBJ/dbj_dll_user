@@ -1,12 +1,42 @@
 #pragma once
 /* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
+// #define DBJ_DLL_CALL_WINDOWS_INCLUDED
+
+#ifdef DBJ_DLL_CALL_WINDOWS_INCLUDED
 #define NOMINMAX
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define max(x, y) ((x) > (y) ? (x) : (y))
 #define STRICT
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#else
+
+extern "C" {
+
+	typedef __int64 (__stdcall* DBJ_FARPROC)();
+	/*
+	the declarations for dll dynamic loading
+	*/
+	__declspec(dllimport) void* __stdcall LoadLibraryA(
+		const char* /*lpLibFileName*/
+	);
+
+	__declspec(dllimport) int __stdcall FreeLibrary(
+		void* /*hLibModule*/
+	);
+
+	__declspec(dllimport) DBJ_FARPROC __stdcall GetProcAddress(
+		void* /*hModule*/,
+		const char* /*lpProcName*/
+	);
+
+} // "C
+
+#pragma comment(lib, "kernel32.lib")
+
+#endif // DBJ_DLL_CALL_WINDOWS_INCLUDED
 
 /// <summary>
 /// user can provide log_function(...)
@@ -27,7 +57,7 @@ namespace dbj {
 		*/
 		class dll_load final
 		{
-			HINSTANCE			dll_handle_ = nullptr;
+			/*HINSTANCE*/void *			dll_handle_ = nullptr;
 			std::string		    dll_name_{};
 			bool				is_system_module{ true };
 
@@ -68,16 +98,20 @@ namespace dbj {
 			*/
 			~dll_load()
 			{
-				if ( this->valid() )
+				if (this->valid())
 					if (!::FreeLibrary(dll_handle_))
 					{
-
+#ifdef DBJ_DLL_CALL_WINDOWS_INCLUDED
 						std::error_code ec(::GetLastError(), std::system_category());
 
 						DBJ_DLL_CALL_LOG(
 							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: "
 							"%s"
 							"\nlast win32 error is: %s", dll_name_.c_str(), ec.message().c_str());
+#else
+						DBJ_DLL_CALL_LOG(
+							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s", dll_name_.c_str());
+#endif
 					}
 			}
 
@@ -88,7 +122,7 @@ namespace dbj {
 			template< typename AFT>
 			AFT get_function(string_view funName)
 			{
-				if ( ! this->valid() )
+				if (!this->valid())
 				{
 					DBJ_DLL_CALL_LOG(
 						"instance is not in a valid state!");
@@ -96,10 +130,10 @@ namespace dbj {
 				}
 				// GetProcAddress
 				// has no unicode equivalent
-				FARPROC result =
+				DBJ_FARPROC result =
 					::GetProcAddress(
 						// handle to DLL module 
-					(HMODULE)dll_handle_,
+					(/*HMODULE*/ void *)dll_handle_,
 						// name of a function 
 						funName.data()
 					);
