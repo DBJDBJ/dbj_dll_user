@@ -8,7 +8,13 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include "..\dbj--simplelog\log.h"
+/// <summary>
+/// user can provide log_function(...)
+/// note: in here we log only errors
+/// </summary>
+#ifndef DBJ_DLL_CALL_LOG
+#define DBJ_DLL_CALL_LOG(...) (void)::fprintf_s(stderr, __VA_ARGS__ )
+#endif DBJ_DLL_CALL_LOG
 
 namespace dbj {
 
@@ -25,7 +31,7 @@ namespace dbj {
 			std::string		    dll_name_{};
 			bool				is_system_module{ true };
 
-			dll_load() {}
+			dll_load() = delete;
 		public:
 
 			constexpr bool valid() const noexcept {
@@ -41,7 +47,7 @@ namespace dbj {
 				is_system_module(system_mod)
 			{
 				if (dll_name_.empty()) {
-					log_error(
+					DBJ_DLL_CALL_LOG(
 						"dll_load(), needs dll or exe name as the first argument"
 					);
 					return;
@@ -50,7 +56,7 @@ namespace dbj {
 				dll_handle_ = ::LoadLibraryA(dll_name_.c_str());
 
 				if (NULL == dll_handle_)
-					log_error(
+					DBJ_DLL_CALL_LOG(
 
 						" Could not find the DLL by name: %s", dll_name_.c_str()
 					);
@@ -62,13 +68,13 @@ namespace dbj {
 			*/
 			~dll_load()
 			{
-				if (NULL != dll_handle_)
+				if ( this->valid() )
 					if (!::FreeLibrary(dll_handle_))
 					{
 
 						std::error_code ec(::GetLastError(), std::system_category());
 
-						log_error(
+						DBJ_DLL_CALL_LOG(
 							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: "
 							"%s"
 							"\nlast win32 error is: %s", dll_name_.c_str(), ec.message().c_str());
@@ -82,9 +88,9 @@ namespace dbj {
 			template< typename AFT>
 			AFT get_function(string_view funName)
 			{
-				if (nullptr == dll_handle_)
+				if ( ! this->valid() )
 				{
-					log_error(
+					DBJ_DLL_CALL_LOG(
 						"instance is not in a valid state!");
 					return nullptr;
 				}
@@ -99,7 +105,7 @@ namespace dbj {
 					);
 #ifndef NDEBUG
 				if (result == nullptr)
-					log_error(
+					DBJ_DLL_CALL_LOG(
 						"Failed to find the address for a function: %s ", funName.data());
 #endif // !NDEBUG
 				return (AFT)result;
