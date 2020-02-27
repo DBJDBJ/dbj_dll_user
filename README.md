@@ -1,6 +1,6 @@
 # `dbj::win::dll_load`
 
-V 1.0.0  (c) 2018-2020 by dbj@dbj.org
+V 2.5.0  (c) 2018-2020 by dbj@dbj.org
 
 ## WIN32 DLL dynamic loader
 
