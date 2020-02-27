@@ -34,6 +34,7 @@ extern "C" inline void actual_log_function
 	va_end(args);
 
 	fprintf(stderr, "\n%s(%lu) : %s", filename, lineno, buffer );
+	fflush(stderr);
 }
 #endif // DBJ_DLL_USER_PROVIDED_LOG_FUN
 /// note: in here we log only errors
@@ -42,41 +43,23 @@ extern "C" inline void actual_log_function
 #define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
 #endif DBJ_DLL_CALL_LOG
 
+/// --------------------------------------------------------------
+// by default dbj_dll_call,h does not include windows
+#ifdef DBJ_DLL_CALL_INCLUDES_WINDOWS
+
+#undef NOMINMAX
 #define NOMINMAX
+#undef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
+#unddef max
 #define max(x, y) ((x) > (y) ? (x) : (y))
+#undef STRICT
 #define STRICT
+#unedf WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-/*
-works without including windows with the declarations bellow 
-but this is of a limited value, for conole apps and such
-windows apps need to include windows.h anyway
-*/
-//extern "C" {
-//
-//	typedef __int64 (__stdcall* DBJ_FARPROC)();
-//	/*
-//	the declarations for dll dynamic loading
-//	*/
-//	__declspec(dllimport) void* __stdcall LoadLibraryA(
-//		const char* /*lpLibFileName*/
-//	);
-//
-//	__declspec(dllimport) int __stdcall FreeLibrary(
-//		void* /*hLibModule*/
-//	);
-//
-//	__declspec(dllimport) DBJ_FARPROC __stdcall GetProcAddress(
-//		void* /*hModule*/,
-//		const char* /*lpProcName*/
-//	);
-//
-//} // "C
-//
-//#pragma comment(lib, "kernel32.lib")
-
+#endif // DBJ_DLL_CALL_INCLUDES_WINDOWS
 
 
 
@@ -95,6 +78,7 @@ namespace dbj {
 			/// inline static const size_t dll_name_len = BUFSIZ;
 			/// we shall do a macro (gasp!)
 #define DBJ_DLL_LOAD_FILE_LEN BUFSIZ
+
 			HINSTANCE			dll_handle_ = nullptr;
 			char  		        dll_name_[BUFSIZ]{0};
 			bool				is_system_module{ true };

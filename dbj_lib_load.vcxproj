@@ -138,7 +138,6 @@
     <ClInclude Include="dbj_dll_call.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dbj--simplelog\log.c" />
     <ClCompile Include="test\test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

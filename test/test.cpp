@@ -1,7 +1,17 @@
 /* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
+// by default dbj_dll_call,h does not include windows
+
+#define NOMINMAX
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#define max(x, y) ((x) > (y) ? (x) : (y))
+#define STRICT
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include "..\dbj_dll_call.h"
+
+
 
 #include <string>
 #include <typeinfo>
@@ -26,15 +36,28 @@ struct redirector final {
 			perror("error on freopen");
 			exit( EXIT_FAILURE); // a bit drastic?
 		}
+
+		fprintf(stderr, "\n\n*******************************************************************************");
+		fprintf(stderr, "\n*******************************************************************************");
+		fprintf(stderr, "\n*****                                                                     *****");
+		fprintf(stderr, "\n*****  LOG BEGIN                                                          *****");
+		fprintf(stderr, "\n*****                                                                     *****");
+		fprintf(stderr, "\n*******************************************************************************");
+		fprintf(stderr, "\n*******************************************************************************\n\n");
 	}
 
 	~redirector()
 	{
-		fflush(stdout);
+		/// if you do this stderr might not outpout to file but to 
+		/// non existent console
+		/// if this happens too soon
+#if 0
+		fflush(stderr);
 		int dup2_rezult_ = _dup2(fd, _fileno(stderr));
 		_close(fd);
 		clearerr(stderr);
 		fsetpos(stderr, &pos);
+#endif
 	}
 }; // redirector
 
