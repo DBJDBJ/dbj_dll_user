@@ -1,16 +1,42 @@
-/* (c) 2019 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
+/* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
-
-#include "..\dbj--simplelog\log.h"
-
-// replace itr with our simple file log
-#define DBJ_DLL_CALL_LOG(...) log_error( __VA_ARGS__ )
 
 #include "..\dbj_dll_call.h"
 
-using namespace ::std;
-using namespace ::std::string_literals;
-using namespace ::std::string_view_literals;
+#include <string>
+#include <typeinfo>
+#include <io.h>
+
+/// -----------------------------------------------------
+/// redirect stderr to file
+/// warning: no error checking whatsoever
+struct redirector final {
+	 int fd{};
+	 fpos_t pos{};
+	 FILE* stream{};
+
+	 redirector( std::string filename )
+	{
+		fflush(stderr);
+		fgetpos(stderr, &pos);
+		fd = _dup(_fileno(stderr));
+		errno_t err = freopen_s(&stream, filename.c_str(), "w", stderr);
+
+		if (err != 0) {
+			perror("error on freopen");
+			exit( EXIT_FAILURE); // a bit drastic?
+		}
+	}
+
+	~redirector()
+	{
+		fflush(stdout);
+		int dup2_rezult_ = _dup2(fd, _fileno(stderr));
+		_close(fd);
+		clearerr(stderr);
+		fsetpos(stderr, &pos);
+	}
+}; // redirector
 
 /*
 NOTE! be sure to declare function pointers from WIN32 DLL's
@@ -23,22 +49,20 @@ void beeper(BeepFP /*beepFunction*/);
 
 template<typename F>
 	void test_dbj_dll_call
-		(string_view /*dll_*/, string_view /*fun_*/, F /*test_fun*/);
+		(char const * /*dll_*/, char const*  /*fun_*/, F /*test_fun*/);
 
 	
 	int main(int argc, const char* argv[], char* envp)
 	{
-		if (EXIT_SUCCESS != dbj_simple_log_startup(argv[0]))
-			return EXIT_FAILURE;
-
+		redirector stderr_to_file( std::string(argv[0]) + ".log" );
 	// provoke error
 	test_dbj_dll_call
-	("kernel32.dll"sv, "Humpty Dumpty"sv, beeper);
+	("kernel32.dll", "Humpty Dumpty", beeper);
 
 	auto R = 3U;
 	while (R--) {
 		test_dbj_dll_call
-		("kernel32.dll"sv, "Beep"sv, beeper);
+		("kernel32.dll", "Beep", beeper);
 	}
 	return EXIT_SUCCESS;
 }
@@ -67,31 +91,32 @@ static void  beeper(BeepFP beepFunction)
 	const unsigned int f_step = 50, d_step = 50;
 
 	do {
-		log_info(" ::Beep(%6d, %6d)", frequency, duration);
+		DBJ_DLL_CALL_LOG(" ::Beep(%6d, %6d)", frequency, duration);
 
 		if (0 == beepFunction(frequency, duration)) {
-			log_error(__FUNCSIG__ "beepFunction() FAILED ?");
+			DBJ_DLL_CALL_LOG(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}
 		frequency -= f_step;
+
 	} while (frequency > 0);
 };
 
 template<typename F>
 static void test_dbj_dll_call
-(string_view dll_, string_view fun_, F test_fun)
+(char const * dll_, char const* fun_, F test_fun)
 {
 	if (
 		// load the dll + get the function
 		// third argument if true means 'user dll is required' 
-		auto  fp = dbj::win::dll_call<BeepFP>(dll_, fun_)
+		auto  fp = dbj::win::dll_call<BeepFP>(dll_ , fun_)
 		; fp // note: C++17 if() syntax
 		) {
-		log_info("\nCalling the function: %s,\nwith signature %s\nfrom a dll: %s", fun_.data(), typeid(fp).name(), dll_.data());
+		DBJ_DLL_CALL_LOG("\nCalling the function: %s,\nwith signature %s\nfrom a dll: %s", fun_, typeid(fp).name(), dll_);
 		test_fun(fp);
 	}
 	else {
-		log_warn("Calling function: %s, from a dll: %s, failed!", fun_.data(), dll_.data());
+		DBJ_DLL_CALL_LOG("Calling function: %s, from a dll: %s, failed!", fun_, dll_);
 	}
 
 }; // test_dbj_dll_call
