@@ -1,24 +1,33 @@
 # `dbj::win::dll_load`
 
-### C++17 WIN32 DLL dynamic loader
+(c) 2018-2020 by dbj@dbj.org
+
+## WIN32 DLL dynamic loader
 
 ### Usage
 
-Basically there is one funcion that does it all. For it to be used you need 
-three things
+Download and include `dbj_dll_call.h` in your include path.
+
+Basically there is one funcion that does it all. 
+You need three things:
 
 1. the dll name 
 2. the function name
 3. the function signature
 
+The usage:
+
 ```cpp
+#include <dbj_dll_call.h>
+
 // the Beep function signature
 typedef BOOL(*BeepFP) (DWORD, DWORD);
 
 // load the dll + get the function
-BeepFP  fp = dbj::win::funload<BeepFP>(
-  L"kernel32.dll", 
-  L"Beep", 
+// not using the class directly
+BeepFP  fp = dbj::win::dll_call<BeepFP>(
+  "kernel32.dll", 
+  "Beep", 
 // third argument if true means 'system dll is required' 
   true);
 
@@ -26,28 +35,26 @@ BeepFP  fp = dbj::win::funload<BeepFP>(
 fp(1000,1000);
 ```
 
-This is used in windows app, mostly. Thus error reporting is done with file logging.
-By default `dbj::win::dll_load` logs to `stderr`
+The dll used, will be properly unloaded when it's holder goes out of scope.
+
+### Testing
+
+For the test please look into `test.cpp`.
+
+### Logging
+
+This header is used in windows app. Thus error reporting is usualy done with file logging.
+By default `dbj::win::dll_load` logs to `actual_log_function` through this macro
+
 ```cpp
-#ifndef DBJ_DLL_CALL_LOG
-#define DBJ_DLL_CALL_LOG(...) (void)::fprintf_s(stderr, __VA_ARGS__ )
-#endif DBJ_DLL_CALL_LOG
-```
-In Windows app's that goes to "nowhere". 
-Top of the test.cpp, shows how users can use thier own logging instead of
-`DBJ_DLL_CALL_LOG`.
-```cpp
-// include our own logger
-#include "..\dbj--simplelog\log.h"
-// replace dbj dll call logger, with user provided simple file log
-#define DBJ_DLL_CALL_LOG(...) log_error( __VA_ARGS__ )
+#define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
 ```
 
-dll will be properly unloaded when it's holder goes out of scope.
-For the fancy test unit please look into `test.cpp`.
+To replace the `actual_log_function` define `DBJ_DLL_USER_PROVIDED_LOG_FUN` and provide your implementation with the same signature.
 
-<hr/>
-Copyright 2018 by dbj@dbj.org
+--------------------------------------------
+
+Copyright 2018/2019/2020 by dbj@dbj.org
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
