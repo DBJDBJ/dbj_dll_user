@@ -17,6 +17,20 @@ In case of problem please do mail me.
 ### Usage
 
 Basically there is one funcion that does it all. 
+
+```cpp
+// load the dll
+// load the function named
+// return the function pointer to it
+
+FP  fp = dbj::win::dll_call<FP>(
+  " ... dll base name or full path ...", 
+  " ... function name ...", 
+  system_dll );
+// third argument if true means 
+// 'system dll is required' 
+```
+
 You need three things:
 
 1. the dll name 
