@@ -1,12 +1,20 @@
 # `dbj::win::dll_load`
 
-(c) 2018-2020 by dbj@dbj.org
+V 1.0.0  (c) 2018-2020 by dbj@dbj.org
 
 ## WIN32 DLL dynamic loader
 
-### Usage
+### Installation
 
-Download and include `dbj_dll_call.h` in your include path.
+Download and include `dbj_dll_call.h` in your include path. NOTE: `windows.h` is not included by default. Define `DBJ_DLL_CALL_INCLUDES_WINDOWS` to have windows included.
+
+#### Compatibility
+
+There is no obvious reason for which this header shoild not work with any C++ version you might use. 
+
+In case of problem please do mail me.
+
+### Usage
 
 Basically there is one funcion that does it all. 
 You need three things:
@@ -44,13 +52,15 @@ For the test please look into `test.cpp`.
 ### Logging
 
 This header is used in windows app. Thus error reporting is usualy done with file logging.
-By default `dbj::win::dll_load` logs to `actual_log_function` through this macro
+By default `dbj::win::dll_load` logs to `actual_log_function` through this macro:
 
 ```cpp
 #define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
 ```
 
-To replace the `actual_log_function` define `DBJ_DLL_USER_PROVIDED_LOG_FUN` and provide your implementation with the same signature.
+To replace the `actual_log_function` define `DBJ_DLL_USER_PROVIDED_LOG_FUN` and provide your implementation with the same signature. Before including `dbj_dll_call.h`.
+
+Enjoy
 
 --------------------------------------------
 
