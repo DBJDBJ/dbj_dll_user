@@ -11,21 +11,19 @@
 
 #include "..\dbj_dll_call.h"
 
-
-
 #include <string>
 #include <typeinfo>
 #include <io.h>
 
 /// -----------------------------------------------------
 /// redirect stderr to file
-/// warning: no error checking whatsoever
+/// warning: not enough error checking
 struct redirector final {
-	 int fd{};
-	 fpos_t pos{};
-	 FILE* stream{};
+	int fd{};
+	fpos_t pos{};
+	FILE* stream{};
 
-	 redirector( std::string filename )
+	redirector(std::string filename)
 	{
 		fflush(stderr);
 		fgetpos(stderr, &pos);
@@ -34,23 +32,25 @@ struct redirector final {
 
 		if (err != 0) {
 			perror("error on freopen");
-			exit( EXIT_FAILURE); // a bit drastic?
+			exit(EXIT_FAILURE); // a bit drastic?
 		}
 
-		fprintf(stderr, "\n\n*******************************************************************************");
-		fprintf(stderr, "\n*******************************************************************************");
+		SYSTEMTIME lt;
+		GetLocalTime(&lt);
+
+		fprintf(stderr, "\n\n");
 		fprintf(stderr, "\n*****                                                                     *****");
 		fprintf(stderr, "\n*****  LOG BEGIN                                                          *****");
 		fprintf(stderr, "\n*****                                                                     *****");
-		fprintf(stderr, "\n*******************************************************************************");
-		fprintf(stderr, "\n*******************************************************************************\n\n");
+		fprintf(stderr, "\n\nLocal time:%4d-%02d-%02d %02d:%02d:%02d\n\n", lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
 	}
 
 	~redirector()
 	{
-		/// if you do this stderr might not outpout to file but to 
+		/// if you do this too soon
+		/// stderr might not outpout to file but to 
 		/// non existent console
-		/// if this happens too soon
+		/// 
 #if 0
 		fflush(stderr);
 		int dup2_rezult_ = _dup2(fd, _fileno(stderr));
@@ -68,34 +68,68 @@ otherwise x86 builds will very likely fail
 */
 typedef WINBASEAPI BOOL(WINAPI* BeepFP) (DWORD, DWORD);
 
-void beeper(BeepFP /*beepFunction*/);
+void beeper_function(BeepFP /*beepFunction*/);
 
 template<typename F>
-	void test_dbj_dll_call
-		(char const * /*dll_*/, char const*  /*fun_*/, F /*test_fun*/);
+void test_dbj_dll_call
+(char const* /*dll_*/, char const*  /*fun_*/, F /*test_fun*/);
 
-	
-	int main(int argc, const char* argv[], char* envp)
-	{
-		redirector stderr_to_file( std::string(argv[0]) + ".log" );
+/*
+this is one bad example
+*/
+static auto not_a_good_idea(char const* dll_, char const* fun_)
+{
+	// load the dll + get the function
+	// third argument if true means 'user dll is required' 
+	auto  fp = dbj::win::dll_fetch<BeepFP>(dll_, fun_);
+	/*
+	1. fp might be null here
+	2. dll loader destructor will unload the dll before the fp is returned
+	*/
+	return fp;
+};
+
+/// -----------------------------------------------------
+int main(int argc, const char* argv[], char* envp)
+{
+	redirector stderr_to_file(std::string(argv[0]) + ".log");
+
 	// provoke error
+	// see what happens
 	test_dbj_dll_call
-	("kernel32.dll", "Humpty Dumpty", beeper);
+	("kernel32.dll", "Humpty Dumpty", beeper_function);
 
+	// see what will happen if using function
+	// from unloaed dll
+	auto beeper = not_a_good_idea("kernel32.dll", "Beep");
+	// should work,but definitely not a good idea
+	// in case of kernel32.dll this works because 
+	// that is one dll that is perhaps always loaded
+	// with any kind of windows program
+	// see test_dbj_dll_call for a safer approach
+	beeper(1000, 1000); 
+
+	// just quickly beep once
+	auto  rezult = dbj::win::dll_call<BeepFP>(
+		"kernel32.dll",
+		"Beep",
+		[](BeepFP beeper) {
+			return beeper(1000, 1000);
+		}
+	);
+
+
+	// try some non trivial beep-ing
 	auto R = 3U;
 	while (R--) {
 		test_dbj_dll_call
-		("kernel32.dll", "Beep", beeper);
+		("kernel32.dll", "Beep", beeper_function);
 	}
 	return EXIT_SUCCESS;
 }
 
 /*
-NOTE: we could make the test function a template and receive
-beeper in where the Beep function usage will be
-encapsulated, etc. But here we are just testing the
-dynamic dll loading
-
+ -----------------------------------------------------
 BOOL Beep( DWORD dwFreq,  // sound frequency, in hertz
 DWORD dwDuration  // sound duration, in milliseconds
 );
@@ -106,7 +140,7 @@ This parameter must be in the range 37 through 32,767 (0x25 through 0x7FFF).
 
 
 // inline auto beeper (BOOL(*beepFunction) (DWORD, DWORD) ) 
-static void  beeper(BeepFP beepFunction)
+static void  beeper_function(BeepFP beepFunction)
 {
 	_ASSERTE(beepFunction);
 
@@ -125,17 +159,30 @@ static void  beeper(BeepFP beepFunction)
 	} while (frequency > 0);
 };
 
+/*
+----------------------------------------------------
+We deliberately do not do trivial dll function usage
+to show we can carry arround the function pointer
+we fetched from a dll
+*/
 template<typename F>
 static void test_dbj_dll_call
-(char const * dll_, char const* fun_, F test_fun)
+(char const* dll_, char const* fun_, F test_fun)
 {
 	if (
 		// load the dll + get the function
 		// third argument if true means 'user dll is required' 
-		auto  fp = dbj::win::dll_call<BeepFP>(dll_ , fun_)
-		; fp // note: C++17 if() syntax
+		auto  fp = dbj::win::dll_fetch<BeepFP>(dll_, fun_)
+		; fp
+		// note: C++17 if() syntax
 		) {
 		DBJ_DLL_CALL_LOG("\nCalling the function: %s,\nwith signature %s\nfrom a dll: %s", fun_, typeid(fp).name(), dll_);
+
+		/*
+		we indeed send the fp further down but we do not return it
+		thus if will function properly because dll loader destructor
+		has not unloaded the dll used before this function is finished
+		*/
 		test_fun(fp);
 	}
 	else {
@@ -143,8 +190,6 @@ static void test_dbj_dll_call
 	}
 
 }; // test_dbj_dll_call
-
-
 
 /*---------------------------------------------------------------------------------------------------------*/
 

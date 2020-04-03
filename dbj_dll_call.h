@@ -5,6 +5,13 @@
 #error __FILE__ does require WIN32 API 
 #endif // _WIN32
 
+// The hope is "any" C++ compiler might compile this header
+// thus we will refrain from C++11 and beyond features
+// this is completely untested as I have no other compiler 
+// but VS 2019 
+
+typedef enum {major = 2, minor = 6, patch = 0 } version ;
+
 #include <assert.h>
 
 /// --------------------------------------------------------------
@@ -165,18 +172,40 @@ namespace dbj {
 		}; // eof dll_load
 
 		/*
-		The 'do it all function',
+		The 'dll function fetch',
 		AFT = Actual Function Type
 		*/
 		template< typename AFT>
-		inline AFT dll_call(
+		inline AFT dll_fetch(
 			char const * dll_, char const * fun_,
-			bool is_system_dll = true,
-			AFT = 0)
+			bool is_system_dll = true )
 		{
 			return
 				::dbj::win::dll_load(dll_, is_system_dll)
 				.get_function<AFT>(fun_);
+		}
+
+		/*
+		The do it all function,
+		call the callback provided with the 
+		pointer of the fetched function.
+		if dll load has failed the callback 
+		will not be called.
+		AFT = Actual Function Type
+		CBF = Call Back Function
+					void ( * callback ) ( AFT ),
+		*/
+		template< typename AFT, typename CBF >
+		inline auto dll_call(
+			char const * dll_, // the dll name
+			char const * fun_, // the function name
+			CBF callback ,
+			bool is_system_dll = true )
+		{
+			AFT function_fetched = dll_fetch<AFT>(dll_, fun_, is_system_dll);
+			// if any, failures are already logged
+			if (function_fetched)
+				return callback(function_fetched);
 		}
 	} // win
 } // dbj
