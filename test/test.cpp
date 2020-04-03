@@ -1,11 +1,11 @@
 /* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
 // by default dbj_dll_call,h does not include windows
-
+// it requires it but does not include it
 #define NOMINMAX
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define max(x, y) ((x) > (y) ? (x) : (y))
-#define STRICT
+#define STRICT 1
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -62,31 +62,37 @@ struct redirector final {
 }; // redirector
 
 /*
+----------------------------------------------------------------
 NOTE! be sure to declare function pointers from WIN32 DLL's
 adorning them with WINBASEAPI and WINAPI macros like here
 otherwise x86 builds will very likely fail
+
+BOOL Beep( DWORD dwFreq,  // sound frequency, in hertz
+DWORD dwDuration  // sound duration, in milliseconds
+);
+
+Parameters dwFreq, specifies the frequency, in hertz, of the sound.
+This parameter must be in the range 37 through 32,767 (0x25 through 0x7FFF).
 */
 typedef WINBASEAPI BOOL(WINAPI* BeepFP) (DWORD, DWORD);
 
-void beeper_function(BeepFP /*beepFunction*/);
-
-template<typename F>
-void test_dbj_dll_call
-(char const* /*dll_*/, char const*  /*fun_*/, F /*test_fun*/);
+bool beeper_function(BeepFP /*beepFunction*/);
 
 /*
+----------------------------------------------------------------
 this is one bad example
 */
+template<typename AFT>
 static auto not_a_good_idea(char const* dll_, char const* fun_)
 {
-	// load the dll + get the function
-	// third argument if true means 'user dll is required' 
-	auto  fp = dbj::win::dll_fetch<BeepFP>(dll_, fun_);
+	auto loader_ = ::dbj::win::dll_load(dll_);
+	auto function_fetched = loader_.get_function<AFT>(fun_);
 	/*
-	1. fp might be null here
+	1. function_fetched fp might be null here
 	2. dll loader destructor will unload the dll before the fp is returned
+	   thus calling function_fetched will crash the app
 	*/
-	return fp;
+	return function_fetched ;
 };
 
 /// -----------------------------------------------------
@@ -95,19 +101,21 @@ int main(int argc, const char* argv[], char* envp)
 	redirector stderr_to_file(std::string(argv[0]) + ".log");
 
 	// provoke error
-	// see what happens
-	test_dbj_dll_call
-	("kernel32.dll", "Humpty Dumpty", beeper_function);
+	// see in the log what has happened
+	dbj::win::dll_call<BeepFP>(
+		"kernel32.dll",
+		"Humpty Dumpty",
+		[](BeepFP beeper) {
+			/* never called */
+		}
+	);
 
-	// see what will happen if using function
-	// from unloaed dll
-	auto beeper = not_a_good_idea("kernel32.dll", "Beep");
-	// should work,but definitely not a good idea
+	// definitely not a good idea
 	// in case of kernel32.dll this works because 
-	// that is one dll that is perhaps always loaded
-	// with any kind of windows program
-	// see test_dbj_dll_call for a safer approach
-	beeper(1000, 1000); 
+	// that is one dll that is almost always pre loaded
+	// for some user made dll this will crash the app
+	auto beeper = not_a_good_idea<BeepFP>("kernel32.dll", "Beep");
+			beeper(1000, 1000); 
 
 	// just quickly beep once
 	auto  rezult = dbj::win::dll_call<BeepFP>(
@@ -118,78 +126,38 @@ int main(int argc, const char* argv[], char* envp)
 		}
 	);
 
-
 	// try some non trivial beep-ing
 	auto R = 3U;
 	while (R--) {
-		test_dbj_dll_call
-		("kernel32.dll", "Beep", beeper_function);
+		auto  rezult = dbj::win::dll_call<BeepFP>(
+			"kernel32.dll",
+			"Beep",
+			beeper_function
+		);
 	}
 	return EXIT_SUCCESS;
 }
 
-/*
- -----------------------------------------------------
-BOOL Beep( DWORD dwFreq,  // sound frequency, in hertz
-DWORD dwDuration  // sound duration, in milliseconds
-);
-
-Parameters dwFreq, specifies the frequency, in hertz, of the sound.
-This parameter must be in the range 37 through 32,767 (0x25 through 0x7FFF).
-*/
-
-
-// inline auto beeper (BOOL(*beepFunction) (DWORD, DWORD) ) 
-static void  beeper_function(BeepFP beepFunction)
+/// -----------------------------------------------------
+static bool  beeper_function(BeepFP beepFunction)
 {
 	_ASSERTE(beepFunction);
 
+	bool rezult_{};
 	unsigned long frequency = 300, duration = 100; // max is 32765;
 	const unsigned int f_step = 50, d_step = 50;
 
 	do {
-		DBJ_DLL_CALL_LOG(" ::Beep(%6d, %6d)", frequency, duration);
-
-		if (0 == beepFunction(frequency, duration)) {
+		rezult_ = beepFunction(frequency, duration);
+		if (! rezult_ ) {
 			DBJ_DLL_CALL_LOG(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}
 		frequency -= f_step;
 
 	} while (frequency > 0);
+	return rezult_;
 };
 
-/*
-----------------------------------------------------
-We deliberately do not do trivial dll function usage
-to show we can carry arround the function pointer
-we fetched from a dll
-*/
-template<typename F>
-static void test_dbj_dll_call
-(char const* dll_, char const* fun_, F test_fun)
-{
-	if (
-		// load the dll + get the function
-		// third argument if true means 'user dll is required' 
-		auto  fp = dbj::win::dll_fetch<BeepFP>(dll_, fun_)
-		; fp
-		// note: C++17 if() syntax
-		) {
-		DBJ_DLL_CALL_LOG("\nCalling the function: %s,\nwith signature %s\nfrom a dll: %s", fun_, typeid(fp).name(), dll_);
-
-		/*
-		we indeed send the fp further down but we do not return it
-		thus if will function properly because dll loader destructor
-		has not unloaded the dll used before this function is finished
-		*/
-		test_fun(fp);
-	}
-	else {
-		DBJ_DLL_CALL_LOG("Calling function: %s, from a dll: %s, failed!", fun_, dll_);
-	}
-
-}; // test_dbj_dll_call
-
-/*---------------------------------------------------------------------------------------------------------*/
+// EOF
 

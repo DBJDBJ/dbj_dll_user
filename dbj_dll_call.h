@@ -10,7 +10,7 @@
 // this is completely untested as I have no other compiler 
 // but VS 2019 
 
-typedef enum {major = 2, minor = 6, patch = 0 } version ;
+typedef enum {major = 2, minor = 7, patch = 0 } version ;
 
 #include <assert.h>
 
@@ -128,15 +128,19 @@ namespace dbj {
 			some deep error with the machines or OS
 			thus we will not ignore it.
 			*/
-			~dll_load()
+			void unload () noexcept 
 			{
-				if (this->valid())
+				if (this->valid()) {
 					if (!::FreeLibrary(dll_handle_))
 					{
 						DBJ_DLL_CALL_LOG(
-						"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s", dll_name_ );
+							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s", dll_name_);
 					}
+					this->dll_handle_ = nullptr;
+				}
 			}
+
+			~dll_load() { unload(); }
 
 			/*
 			AFT = Actual Function Type
@@ -172,20 +176,6 @@ namespace dbj {
 		}; // eof dll_load
 
 		/*
-		The 'dll function fetch',
-		AFT = Actual Function Type
-		*/
-		template< typename AFT>
-		inline AFT dll_fetch(
-			char const * dll_, char const * fun_,
-			bool is_system_dll = true )
-		{
-			return
-				::dbj::win::dll_load(dll_, is_system_dll)
-				.get_function<AFT>(fun_);
-		}
-
-		/*
 		The do it all function,
 		call the callback provided with the 
 		pointer of the fetched function.
@@ -193,7 +183,7 @@ namespace dbj {
 		will not be called.
 		AFT = Actual Function Type
 		CBF = Call Back Function
-					void ( * callback ) ( AFT ),
+			auto ( * callback ) ( AFT )
 		*/
 		template< typename AFT, typename CBF >
 		inline auto dll_call(
@@ -202,7 +192,8 @@ namespace dbj {
 			CBF callback ,
 			bool is_system_dll = true )
 		{
-			AFT function_fetched = dll_fetch<AFT>(dll_, fun_, is_system_dll);
+			auto loader_ = ::dbj::win::dll_load(dll_, is_system_dll);
+			AFT function_fetched = loader_.get_function<AFT>(fun_);
 			// if any, failures are already logged
 			if (function_fetched)
 				return callback(function_fetched);
