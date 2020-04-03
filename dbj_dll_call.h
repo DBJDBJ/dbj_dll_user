@@ -2,7 +2,7 @@
 /* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
 #ifndef _WIN32
-#error __FILE__ does reuqire WIN32 API 
+#error __FILE__ does require WIN32 API 
 #endif // _WIN32
 
 #include <assert.h>
