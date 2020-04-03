@@ -51,7 +51,7 @@ extern "C" inline void actual_log_function
 #define NOMINMAX
 #undef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
-#unddef max
+#undef max
 #define max(x, y) ((x) > (y) ? (x) : (y))
 #undef STRICT
 #define STRICT
