@@ -162,7 +162,7 @@ namespace dbj {
 #endif // _DEBUG
 				return (AFT)result;
 			}
-		};
+		}; // eof dll_load
 
 		/*
 		The 'do it all function',
