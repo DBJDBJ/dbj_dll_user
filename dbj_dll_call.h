@@ -27,7 +27,7 @@ extern "C" inline void actual_log_function
 {
 	assert(filename);	assert(lineno);	assert(format);
 	va_list args;
-	char buffer[BUFSIZ];
+	char buffer[BUFSIZ] = {0};
 
 	va_start(args, format);
 	vsnprintf(buffer, sizeof buffer, format, args);
@@ -54,21 +54,16 @@ extern "C" inline void actual_log_function
 #undef max
 #define max(x, y) ((x) > (y) ? (x) : (y))
 #undef STRICT
-#define STRICT
+#define STRICT 1
 #unedf WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #endif // DBJ_DLL_CALL_INCLUDES_WINDOWS
 
-
-
 namespace dbj {
-
 	namespace win {
-
 		using namespace ::std;
-
 		/*
 		dynamic dll loading and fetching a function from the said dll
 		*/
@@ -79,9 +74,9 @@ namespace dbj {
 			/// we shall do a macro (gasp!)
 #define DBJ_DLL_LOAD_FILE_LEN BUFSIZ
 
-			HINSTANCE			dll_handle_ = nullptr;
+			HINSTANCE		dll_handle_ = nullptr;
 			char  		        dll_name_[BUFSIZ]{0};
-			bool				is_system_module{ true };
+			bool			is_system_module{ true };
 
 			dll_load() = delete; // no default ctor
 
