@@ -25,7 +25,7 @@
 extern "C" inline void actual_log_function
 (const char* filename,	long lineno,	const char* format, 	...)
 {
-	assert(filename);	assert(lineno);	assert(format);
+	assert(filename && lineno && format);
 	va_list args;
 	char buffer[BUFSIZ] = {0};
 
