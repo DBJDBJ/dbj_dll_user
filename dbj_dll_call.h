@@ -15,6 +15,25 @@ typedef enum {major = 2, minor = 7, patch = 0 } version ;
 #include <assert.h>
 
 /// --------------------------------------------------------------
+// by default dbj_dll_call.h does not include windows
+// but it needs that
+#ifdef DBJ_DLL_CALL_INCLUDES_WINDOWS
+
+#undef NOMINMAX
+#define NOMINMAX
+#undef min
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#undef max
+#define max(x, y) ((x) > (y) ? (x) : (y))
+#undef STRICT
+#define STRICT 1
+#undef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#endif // DBJ_DLL_CALL_INCLUDES_WINDOWS
+
+/// --------------------------------------------------------------
 /// user can provide the actual log function
 /// the required signature is
 ///
@@ -49,24 +68,6 @@ extern "C" inline void actual_log_function
 #ifndef DBJ_DLL_CALL_LOG
 #define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
 #endif DBJ_DLL_CALL_LOG
-
-/// --------------------------------------------------------------
-// by default dbj_dll_call,h does not include windows
-#ifdef DBJ_DLL_CALL_INCLUDES_WINDOWS
-
-#undef NOMINMAX
-#define NOMINMAX
-#undef min
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#undef max
-#define max(x, y) ((x) > (y) ? (x) : (y))
-#undef STRICT
-#define STRICT 1
-#unedf WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#endif // DBJ_DLL_CALL_INCLUDES_WINDOWS
 
 namespace dbj {
 	namespace win {
@@ -169,7 +170,7 @@ namespace dbj {
 #ifdef _DEBUG
 				if (result == nullptr)
 					DBJ_DLL_CALL_LOG(
-						"Failed to find the address for a function: %s ", fun_name_ );
+						"\nFailed to find the address for a function: %s\nThe DLL name is: %s", fun_name_, dll_name_  );
 #endif // _DEBUG
 				return (AFT)result;
 			}

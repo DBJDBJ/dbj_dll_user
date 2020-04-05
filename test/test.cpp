@@ -1,14 +1,6 @@
 /* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
-// by default dbj_dll_call,h does not include windows
-// it requires it but does not include it
-#define NOMINMAX
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#define max(x, y) ((x) > (y) ? (x) : (y))
-#define STRICT 1
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
+#define DBJ_DLL_CALL_INCLUDES_WINDOWS
 #include "..\dbj_dll_call.h"
 
 #include <string>
@@ -31,7 +23,7 @@ struct redirector final {
 		errno_t err = freopen_s(&stream, filename.c_str(), "w", stderr);
 
 		if (err != 0) {
-			perror("error on freopen");
+			perror( __FILE__ " redirector error on freopen");
 			exit(EXIT_FAILURE); // a bit drastic?
 		}
 
@@ -50,7 +42,7 @@ struct redirector final {
 		/// if you do this too soon
 		/// stderr might not outpout to file but to 
 		/// non existent console
-		/// 
+		/// best just leave it
 #if 0
 		fflush(stderr);
 		int dup2_rezult_ = _dup2(fd, _fileno(stderr));
@@ -92,13 +84,22 @@ static auto not_a_good_idea(char const* dll_, char const* fun_)
 	2. dll loader destructor will unload the dll before the fp is returned
 	   thus calling function_fetched will crash the app
 	*/
-	return function_fetched ;
+	return function_fetched;
 };
+
+extern "C" void  memory_info(FILE*);
 
 /// -----------------------------------------------------
 int main(int argc, const char* argv[], char* envp)
 {
 	redirector stderr_to_file(std::string(argv[0]) + ".log");
+
+/*
+NOTE: freeLibrary on dll  will not release memory immediately
+most system dll's will simply stay in the memory
+But user made dll's unloading will be very benefitial. Best example is resource only dll's
+*/
+	memory_info(stderr);
 
 	// provoke error
 	// see in the log what has happened
@@ -115,7 +116,11 @@ int main(int argc, const char* argv[], char* envp)
 	// that is one dll that is almost always pre loaded
 	// for some user made dll this will crash the app
 	auto beeper = not_a_good_idea<BeepFP>("kernel32.dll", "Beep");
-			beeper(1000, 1000); 
+
+	// if dll is unloaded pointer to its function will not be NULL
+	if (beeper)
+		// this call will crash the app
+		beeper(1000, 1000);
 
 	// just quickly beep once
 	auto  rezult = dbj::win::dll_call<BeepFP>(
@@ -133,7 +138,7 @@ int main(int argc, const char* argv[], char* envp)
 			"kernel32.dll",
 			"Beep",
 			beeper_function
-		);
+			);
 	}
 	return EXIT_SUCCESS;
 }
@@ -144,12 +149,12 @@ static bool  beeper_function(BeepFP beepFunction)
 	_ASSERTE(beepFunction);
 
 	bool rezult_{};
-	unsigned long frequency = 300, duration = 100; // max is 32765;
+	unsigned long frequency = 300, duration = 100; // max freq. is 32765;
 	const unsigned int f_step = 50, d_step = 50;
 
 	do {
 		rezult_ = beepFunction(frequency, duration);
-		if (! rezult_ ) {
+		if (!rezult_) {
 			DBJ_DLL_CALL_LOG(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}

@@ -138,6 +138,7 @@
     <ClInclude Include="dbj_dll_call.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="test\memory_info.c" />
     <ClCompile Include="test\test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
