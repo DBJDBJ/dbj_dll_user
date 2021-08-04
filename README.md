@@ -32,7 +32,7 @@ Download and include `dbj_dll_call.h` in your include path. NOTE: `windows.h` is
 
 #### Compatibility
 
-There is no obvious reason for which this header shoild not work with any C++ version you might use. Please [do let us know](mailto:info@dbj.systems). 
+There is no obvious reason for which this header should not work with any C++ version you might use. Please [do let us know](mailto:info@dbj.systems) if it does not. 
 
 ### Usage
 
