@@ -67,11 +67,11 @@ extern "C" inline void actual_log_function
 /// 
 #ifndef DBJ_DLL_CALL_LOG
 #define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
-#endif DBJ_DLL_CALL_LOG
+#endif // DBJ_DLL_CALL_LOG
 
 namespace dbj {
 	namespace win {
-		using namespace ::std;
+		// using namespace std;
 		/*
 		dynamic dll loading and fetching a function from the said dll
 		*/
@@ -113,6 +113,7 @@ namespace dbj {
 					);
 					return;
 				}
+                 (void)this->is_system_module; // reserved for future use
 
 				assign_dll_name(dll_file_name_);
 
@@ -191,13 +192,17 @@ namespace dbj {
 			char const * dll_, // the dll name
 			char const * fun_, // the function name
 			CBF callback ,
-			bool is_system_dll = true )
+			bool is_system_dll = false ) noexcept
 		{
+			assert( dll_ && fun_ );
 			auto loader_ = ::dbj::win::dll_load(dll_, is_system_dll);
 			AFT function_fetched = loader_.get_function<AFT>(fun_);
 			// if any, failures are already logged
 			if (function_fetched)
 				return callback(function_fetched);
+            // else return the default value of whatever type
+			// callback returns
+			return decltype(callback(function_fetched)){};
 		}
 	} // win
 } // dbj
