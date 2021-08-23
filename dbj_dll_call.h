@@ -202,6 +202,7 @@ namespace dbj {
 				return callback(function_fetched);
             // else return the default value of whatever type
 			// callback returns
+			// thus this callback must not return void
 			return decltype(callback(function_fetched)){};
 		}
 	} // win
