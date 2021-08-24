@@ -185,7 +185,7 @@ namespace dbj {
 		will not be called.
 		AFT = Actual Function Type
 		CBF = Call Back Function
-			auto ( * callback ) ( AFT )
+			void ( * callback ) ( AFT )
 		*/
 		template< typename AFT, typename CBF >
 		inline auto dll_call(
@@ -193,17 +193,14 @@ namespace dbj {
 			char const * fun_, // the function name
 			CBF callback ,
 			bool is_system_dll = false ) noexcept
+			-> void
 		{
 			assert( dll_ && fun_ );
 			auto loader_ = ::dbj::win::dll_load(dll_, is_system_dll);
 			AFT function_fetched = loader_.get_function<AFT>(fun_);
 			// if any, failures are already logged
 			if (function_fetched)
-				return callback(function_fetched);
-            // else return the default value of whatever type
-			// callback returns
-			// thus this callback must not return void
-			return decltype(callback(function_fetched)){};
+				callback(function_fetched);
 		}
 	} // win
 } // dbj

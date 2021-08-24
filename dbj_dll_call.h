@@ -19,7 +19,7 @@ typedef enum dbjcapi_dll_call_semver
 } dbjcapi_dll_call_semver;
 
 /// --------------------------------------------------------------
-#ifdef DBJCAPI_DLL_CALLER_IMPLEMENTATION 
+#ifdef DBJCAPI_DLL_CALLER_IMPLEMENTATION
 /// --------------------------------------------------------------
 
 #include "../dbj_capi/cdebug.h"
@@ -48,7 +48,7 @@ typedef struct dbjcapi_dll_call_state
 
 static inline dbjcapi_dll_call_state *dbjcapi_dll_call_state_(void)
 {
-	dbjcapi_dll_call_state instance = {0, {0}};
+	static dbjcapi_dll_call_state instance = {0, {0}};
 	return &instance;
 }
 
@@ -78,13 +78,13 @@ static inline int dbjcapi_assign_dll_name(char const name_[static 1])
 	}
 #endif // _DEBUG
 
-	return strncpy_s(state->dll_name_, name_, DBJCAPI_DLL_LOAD_FILE_LEN);
+	return strncpy_s(state->dll_name_, DBJCAPI_DLL_LOAD_FILE_LEN, name_, strlen(name_));
 }
 
 /*
 We manage just a single DLL load --> call -->dbjcapi_dll_unload
 */
-static inline bool dbjcapi_dll_load(
+static inline void dbjcapi_dll_load(
 	const char dll_file_name_[static 1])
 {
 	// will do fast fail on logic error
@@ -93,12 +93,12 @@ static inline bool dbjcapi_dll_load(
 
 	dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
 
-	state->dll_handle_ = ::LoadLibraryA(state->dll_name_);
+	state->dll_handle_ = LoadLibraryA(state->dll_name_);
 
 	if (NULL == state->dll_handle_)
 	{
-		DBJ_DLL_CALL_LOG(" Could not find the DLL by name: %s", dll_name_);
-		// remove the file name
+		DBJ_DLL_CALL_LOG(" Could not find the DLL by name: %s", state->dll_name_);
+		// reset the file name
 		state->dll_name_[0] = '\0';
 	}
 }
@@ -111,14 +111,14 @@ static inline void dbjcapi_dll_unload()
 {
 	if (dbjcapi_dll_loaded())
 	{
-		if (!::FreeLibrary(state->dll_handle_))
+		dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
+		if (!FreeLibrary(state->dll_handle_))
 		{
 			DBJ_DLL_CALL_LOG(
-				"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s\n", state->dll_name_);
+				"\ndbjdll_loadFreeLibrary failed. The DLL name is: %s\n", state->dll_name_);
 			DBJ_FAST_FAIL;
 		}
 		// leave it in unloaded state
-		dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
 		state->dll_handle_ = 0;
 		state->dll_name_[0] = '\0';
 	}
@@ -134,36 +134,32 @@ bellow returns null or function pointer to the one requested
 void * "saves the day here" thus the function is generic
 the user knows the RFP and will cast to it
 */
-void *get_function(char const fun_name_[static 1])
+static inline void *dbjcapi_dll_get_function(char const fun_name_[static 1])
 {
 	dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
 	if (!dbjcapi_dll_loaded())
-#ifdef _DEBUG
-		DBJ_FASTFAIL;
-#else  // ! _DEBUG
 	{
-		DBJ_DLL_CALL_LOG("DBJCAPI DLL LOADER is not in a valid state!");
+		DBJ_FAST_FAIL;
 		return 0;
 	}
-#endif // ! _DEBUG
-	   // Funny fact: GetProcAddress has no unicode equivalent
+
+	// Funny fact: GetProcAddress has no unicode equivalent
 	FARPROC result =
-		::GetProcAddress(
+		GetProcAddress(
 			// handle to DLL module
 			(HMODULE)state->dll_handle_,
 			// name of a function
 			fun_name_);
 	if (result == 0)
-#ifndef _DEBUG
+	{
 		DBJ_DLL_CALL_LOG(
-			"\nFailed to find the address for a function: %s\nThe DLL name is: %s", fun_name_, dll_name_);
-#else  // _DEBUG
-		DBJ_FASTFAIL;
-#endif // _DEBUG
+			"\nFailed to find the address for a function: %s\nThe DLL name is: %s", fun_name_, state->dll_name_);
+		DBJ_FAST_FAIL;
+	}
 	return result;
 }
 
-#endif DBJCAPI_DLL_CALLER_IMPLEMENTATION 
+#endif // DBJCAPI_DLL_CALLER_IMPLEMENTATION
 /*
 RFP = Required Function FP of the function fromm the DLL
 
@@ -183,16 +179,18 @@ void cb ( FP42 get42_from_dll ) { assert( 42 == get42_from_dll() );  }
 
 DBJCAPI_DLL_CALL( "dbj.dll", "get42", FP42 ) ;
 
-*/
-#define DBJCAPI_DLL_CALL(dll_name_, fun_name_, RFP)
-{
-	dbjcapi_dll_load(dll_name_);
-	RFP function_fetched = (RFP *)dbjcapi_dll_get_function(fun_name_);
 	// if any, failures are already logged
-	if (function_fetched)
-		callback(function_fetched);
-	dbjcapi_dll_unload();
-}
+
+*/
+#define DBJCAPI_DLL_CALL(dll_name_, fun_name_, RFP, callback_)       \
+	do                                                               \
+	{                                                                \
+		dbjcapi_dll_load(dll_name_);                                 \
+		RFP *function_ = (RFP *)dbjcapi_dll_get_function(fun_name_); \
+		if (function_)                                               \
+			callback_(*function_);                                   \
+		dbjcapi_dll_unload();                                        \
+	} while (0)
 
 // ----------------------------------------------------------------------------
 DBJ_EXTERN_C_END
