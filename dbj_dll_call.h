@@ -1,210 +1,198 @@
 #pragma once
-/* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
+/* (c) 2019 - 2021 by dbj.org   -- https://dbj.org/license_dbj
+		
+dynamic dll loading and fetching a function from the said dll
 
-#ifndef _WIN32
-#error __FILE__ does require WIN32 API 
-#endif // _WIN32
+#define DBJCAPI_DLL_CALLER_IMPLEMENTATION  in exactly one place 
+*/
 
-// The hope is "any" C++ compiler might compile this header
-// thus we will refrain from C++11 and beyond features
-// this is completely untested as I have no other compiler 
-// but VS 2019 
+#include "../dbj_capi/ccommon.h"
 
-typedef enum {major = 2, minor = 7, patch = 0 } version ;
+// ----------------------------------------------------------------
+DBJ_EXTERN_C_BEGIN
 
-#include <assert.h>
+typedef enum dbjcapi_dll_call_semver
+{
+	major = 1,
+	minor = 0,
+	patch = 0
+} dbjcapi_dll_call_semver;
 
 /// --------------------------------------------------------------
-// by default dbj_dll_call.h does not include windows
-// but it needs that
-#ifdef DBJ_DLL_CALL_INCLUDES_WINDOWS
+#ifdef DBJCAPI_DLL_CALLER_IMPLEMENTATION 
+/// --------------------------------------------------------------
 
-#undef NOMINMAX
-#define NOMINMAX
-#undef min
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#undef max
-#define max(x, y) ((x) > (y) ? (x) : (y))
-#undef STRICT
-#define STRICT 1
-#undef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include "../dbj_capi/cdebug.h"
+#include "../dbj_capi/default_log.h"
 
-#endif // DBJ_DLL_CALL_INCLUDES_WINDOWS
-
+#include <stdarg.h>
+#include <stdio.h>
 /// --------------------------------------------------------------
 /// user can provide the actual log function
 /// the required signature is
 ///
-/// extern "C" void actual_log_function (const char* , long , const char* , ...);
-///
-#ifndef DBJ_DLL_USER_PROVIDED_LOG_FUN
-///  Our own log function, delberately not C++
-/// the simplest way to use this from windows app
-/// might be to redirect stderr to a file
-/// https://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
-
-#include <stdarg.h>
-#include <stdio.h>
-
-extern "C" inline void actual_log_function
-(const char* filename,	long lineno,	const char* format, 	...)
-{
-	assert(filename && lineno && format);
-	va_list args;
-	char buffer[BUFSIZ] = {0};
-
-	va_start(args, format);
-	vsnprintf(buffer, sizeof buffer, format, args);
-	va_end(args);
-
-	fprintf(stderr, "\n%s(%lu) : %s", filename, lineno, buffer );
-	fflush(stderr);
-}
-#endif // DBJ_DLL_USER_PROVIDED_LOG_FUN
-/// note: in here we log only errors
-/// 
+/// extern "C" void (*user_log_FP) (const char* file, long line, const char* , ...);
 #ifndef DBJ_DLL_CALL_LOG
-#define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
+#define DBJ_DLL_CALL_LOG(...) dbj_default_log_function(__FILE__, __LINE__, __VA_ARGS__)
 #endif // DBJ_DLL_CALL_LOG
 
-namespace dbj {
-	namespace win {
-		// using namespace std;
-		/*
-		dynamic dll loading and fetching a function from the said dll
-		*/
-		class dll_load final
-		{
-			/// to widen the applicability instead of C++17 solution
-			/// inline static const size_t dll_name_len = BUFSIZ;
-			/// we shall do a macro (gasp!)
-#define DBJ_DLL_LOAD_FILE_LEN BUFSIZ
+#undef DBJCAPI_DLL_LOAD_FILE_LEN
+#define DBJCAPI_DLL_LOAD_FILE_LEN 1024
 
-			HINSTANCE		dll_handle_ = nullptr;
-			char  		        dll_name_[BUFSIZ]{0};
-			bool			is_system_module{ true };
+typedef struct dbjcapi_dll_call_state
+{
+	// critical section will be in here
+	HINSTANCE dll_handle_;
+	char dll_name_[DBJCAPI_DLL_LOAD_FILE_LEN];
+} dbjcapi_dll_call_state;
 
-			dll_load() = delete; // no default ctor
+static inline dbjcapi_dll_call_state *dbjcapi_dll_call_state_(void)
+{
+	dbjcapi_dll_call_state instance = {0, {0}};
+	return &instance;
+}
 
-			void assign_dll_name( char const *  name_ )	{
-				assert( name_ );
-				strncpy_s(dll_name_, name_, DBJ_DLL_LOAD_FILE_LEN);
-			}
+static inline bool dbjcapi_dll_loaded(void)
+{
+	dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
+	// if this is NOT NULL we know DLL by this name is loaded
+	// until it is not dbjcapi_dll_unloaded no other DLL can be used and its function called
+	return state->dll_handle_ != 0;
+}
 
-		public:
+static inline int dbjcapi_assign_dll_name(char const name_[static 1])
+{
+	dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
 
-			/// we do not do exceptions
-			const bool valid() const noexcept {
-				return dll_handle_ != nullptr;
-			}
-
-			explicit dll_load(
-				const char  * dll_file_name_,
-				bool system_mod = true
-			)
-				: dll_handle_(NULL),
-				is_system_module(system_mod)
-			{
-				if (!dll_file_name_) {
-					DBJ_DLL_CALL_LOG(
-						"dll_load(), needs dll or exe name as the first argument"
-					);
-					return;
-				}
-                 (void)this->is_system_module; // reserved for future use
-
-				assign_dll_name(dll_file_name_);
-
-				// address of filename of executable module 
-				dll_handle_ = ::LoadLibraryA(dll_name_);
-
-				if (NULL == dll_handle_)
-					DBJ_DLL_CALL_LOG(
-						" Could not find the DLL by name: %s", dll_name_
-					);
-			}
-			/*
-			FreeLibrary() failure is very rare and might signal
-			some deep error with the machines or OS
-			thus we will not ignore it.
-			*/
-			void unload () noexcept 
-			{
-				if (this->valid()) {
-					if (!::FreeLibrary(dll_handle_))
-					{
-						DBJ_DLL_CALL_LOG(
-							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s", dll_name_);
-					}
-					this->dll_handle_ = nullptr;
-				}
-			}
-
-			~dll_load() { unload(); }
-
-			/*
-			AFT = Actual Function Type
-			returns null or function pointer to the one requested
-			*/
-			template< typename AFT>
-			AFT get_function(char const * fun_name_ )
-			{
-				assert(fun_name_);
-
-				if (!this->valid())
-				{
-					DBJ_DLL_CALL_LOG(
-						"instance is not in a valid state!");
-					return nullptr;
-				}
-				// GetProcAddress
-				// has no unicode equivalent
-				FARPROC result =
-					::GetProcAddress(
-						// handle to DLL module 
-					( HMODULE )dll_handle_,
-						// name of a function 
-						fun_name_
-					);
+	// major logic check here
 #ifdef _DEBUG
-				if (result == nullptr)
-					DBJ_DLL_CALL_LOG(
-						"\nFailed to find the address for a function: %s\nThe DLL name is: %s", fun_name_, dll_name_  );
-#endif // _DEBUG
-				return (AFT)result;
-			}
-		}; // eof dll_load
-
-		/*
-		The do it all function,
-		call the callback provided with the 
-		pointer of the fetched function.
-		if dll load has failed the callback 
-		will not be called.
-		AFT = Actual Function Type
-		CBF = Call Back Function
-			auto ( * callback ) ( AFT )
-		*/
-		template< typename AFT, typename CBF >
-		inline auto dll_call(
-			char const * dll_, // the dll name
-			char const * fun_, // the function name
-			CBF callback ,
-			bool is_system_dll = false ) noexcept
+	if (dbjcapi_dll_loaded())
+	{
+		if (state->dll_name_[0] != 0)
+			DBG_PRINT("DLL %s, is already loaded", state->dll_name_);
+		else
 		{
-			assert( dll_ && fun_ );
-			auto loader_ = ::dbj::win::dll_load(dll_, is_system_dll);
-			AFT function_fetched = loader_.get_function<AFT>(fun_);
-			// if any, failures are already logged
-			if (function_fetched)
-				return callback(function_fetched);
-            // else return the default value of whatever type
-			// callback returns
-			// thus this callback must not return void
-			return decltype(callback(function_fetched)){};
+			DBG_PRINT("DLL name must exist if DBJCAPI DLL LOADER state is LOADED?");
+			DBJ_FAST_FAIL;
 		}
-	} // win
-} // dbj
+	}
+#endif // _DEBUG
 
+	return strncpy_s(state->dll_name_, name_, DBJCAPI_DLL_LOAD_FILE_LEN);
+}
+
+/*
+We manage just a single DLL load --> call -->dbjcapi_dll_unload
+*/
+static inline bool dbjcapi_dll_load(
+	const char dll_file_name_[static 1])
+{
+	// will do fast fail on logic error
+	// ie if dll is already loaded
+	dbjcapi_assign_dll_name(dll_file_name_);
+
+	dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
+
+	state->dll_handle_ = ::LoadLibraryA(state->dll_name_);
+
+	if (NULL == state->dll_handle_)
+	{
+		DBJ_DLL_CALL_LOG(" Could not find the DLL by name: %s", dll_name_);
+		// remove the file name
+		state->dll_name_[0] = '\0';
+	}
+}
+/*
+FreeLibrary() failure is very rare and might signal
+some deep error with the machines or OS
+thus we will not ignore it.
+*/
+static inline void dbjcapi_dll_unload()
+{
+	if (dbjcapi_dll_loaded())
+	{
+		if (!::FreeLibrary(state->dll_handle_))
+		{
+			DBJ_DLL_CALL_LOG(
+				"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s\n", state->dll_name_);
+			DBJ_FAST_FAIL;
+		}
+		// leave it in unloaded state
+		dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
+		state->dll_handle_ = 0;
+		state->dll_name_[0] = '\0';
+	}
+}
+
+// we will use the destructor to free the dll if any is left in memory
+__attribute__((destructor)) static inline void dbjcapi_dll_loader_destructor(void) { dbjcapi_dll_unload(); }
+
+/*
+RFP = Required Function FP of the function fromm the DLL
+
+bellow returns null or function pointer to the one requested
+void * "saves the day here" thus the function is generic
+the user knows the RFP and will cast to it
+*/
+void *get_function(char const fun_name_[static 1])
+{
+	dbjcapi_dll_call_state *state = dbjcapi_dll_call_state_();
+	if (!dbjcapi_dll_loaded())
+#ifdef _DEBUG
+		DBJ_FASTFAIL;
+#else  // ! _DEBUG
+	{
+		DBJ_DLL_CALL_LOG("DBJCAPI DLL LOADER is not in a valid state!");
+		return 0;
+	}
+#endif // ! _DEBUG
+	   // Funny fact: GetProcAddress has no unicode equivalent
+	FARPROC result =
+		::GetProcAddress(
+			// handle to DLL module
+			(HMODULE)state->dll_handle_,
+			// name of a function
+			fun_name_);
+	if (result == 0)
+#ifndef _DEBUG
+		DBJ_DLL_CALL_LOG(
+			"\nFailed to find the address for a function: %s\nThe DLL name is: %s", fun_name_, dll_name_);
+#else  // _DEBUG
+		DBJ_FASTFAIL;
+#endif // _DEBUG
+	return result;
+}
+
+#endif DBJCAPI_DLL_CALLER_IMPLEMENTATION 
+/*
+RFP = Required Function FP of the function fromm the DLL
+
+The do it all function,
+call the callback provided with the 
+pointer of the fetched function.
+if dll load has failed the callback 
+will not be called.
+RFP = Actual Function Type
+CBF = Call Back Function
+	void ( * callback ) ( RFP )
+
+Example: from dbj.dll exported is a function int get42(void) ; let's call it
+
+int (*FP42) (void) ;
+void cb ( FP42 get42_from_dll ) { assert( 42 == get42_from_dll() );  }
+
+DBJCAPI_DLL_CALL( "dbj.dll", "get42", FP42 ) ;
+
+*/
+#define DBJCAPI_DLL_CALL(dll_name_, fun_name_, RFP)
+{
+	dbjcapi_dll_load(dll_name_);
+	RFP function_fetched = (RFP *)dbjcapi_dll_get_function(fun_name_);
+	// if any, failures are already logged
+	if (function_fetched)
+		callback(function_fetched);
+	dbjcapi_dll_unload();
+}
+
+// ----------------------------------------------------------------------------
+DBJ_EXTERN_C_END

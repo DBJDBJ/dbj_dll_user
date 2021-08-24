@@ -1,57 +1,9 @@
 /* (c) 2019/2020 by dbj.org   -- CC BY-SA 4.0 -- https://creativecommons.org/licenses/by-sa/4.0/ */
 
 #define DBJ_DLL_CALL_INCLUDES_WINDOWS
-#include "..\dbj_dll_call.h"
+#include "..\dbj_dll_call.hpp"
 
-#include <string>
-#include <typeinfo>
-#include <io.h>
 
-/// -----------------------------------------------------
-/// redirect stderr to file
-/// warning: not enough error checking
-struct redirector final {
-	int fd{};
-	fpos_t pos{};
-	FILE* stream{};
-
-	redirector(std::string filename)
-	{
-		fflush(stderr);
-		fgetpos(stderr, &pos);
-		fd = _dup(_fileno(stderr));
-		errno_t err = freopen_s(&stream, filename.c_str(), "w", stderr);
-
-		if (err != 0) {
-			perror( __FILE__ " redirector error on freopen");
-			exit(EXIT_FAILURE); // a bit drastic?
-		}
-
-		SYSTEMTIME lt;
-		GetLocalTime(&lt);
-
-		fprintf(stderr, "\n\n");
-		fprintf(stderr, "\n*****                                                                     *****");
-		fprintf(stderr, "\n*****  LOG BEGIN                                                          *****");
-		fprintf(stderr, "\n*****                                                                     *****");
-		fprintf(stderr, "\n\nLocal time:%4d-%02d-%02d %02d:%02d:%02d\n\n", lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
-	}
-
-	~redirector()
-	{
-		/// if you do this too soon
-		/// stderr might not outpout to file but to 
-		/// non existent console
-		/// best just leave it
-#if 0
-		fflush(stderr);
-		int dup2_rezult_ = _dup2(fd, _fileno(stderr));
-		_close(fd);
-		clearerr(stderr);
-		fsetpos(stderr, &pos);
-#endif
-	}
-}; // redirector
 
 /*
 ----------------------------------------------------------------
