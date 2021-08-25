@@ -1,4 +1,6 @@
 #pragma once
+#ifndef DBJCAPI_DLL_LOADER_INC
+#define DBJCAPI_DLL_LOADER_INC
 /* (c) 2019 - 2021 by dbj.org   -- https://dbj.org/license_dbj
 		
 dynamic dll loading and fetching a function from the said dll
@@ -186,11 +188,13 @@ DBJCAPI_DLL_CALL( "dbj.dll", "get42", FP42 ) ;
 	do                                                               \
 	{                                                                \
 		dbjcapi_dll_load(dll_name_);                                 \
-		RFP *function_ = (RFP *)dbjcapi_dll_get_function(fun_name_); \
+		RFP function_ = (RFP)dbjcapi_dll_get_function(fun_name_); \
 		if (function_)                                               \
-			callback_(*function_);                                   \
+			callback_(function_);                                   \
 		dbjcapi_dll_unload();                                        \
 	} while (0)
 
 // ----------------------------------------------------------------------------
 DBJ_EXTERN_C_END
+
+#endif // DBJCAPI_DLL_LOADER_INC
