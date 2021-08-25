@@ -35,7 +35,7 @@ typedef enum dbjcapi_dll_call_semver
 ///
 /// extern "C" void (*user_log_FP) (const char* file, long line, const char* , ...);
 #ifndef DBJ_DLL_CALL_LOG
-#define DBJ_DLL_CALL_LOG(...) dbj_default_log_function(__FILE__, __LINE__, __VA_ARGS__)
+#define DBJ_DLL_CALL_LOG(...) dbjcapi_default_log_function(__FILE__, __LINE__, __VA_ARGS__)
 #endif // DBJ_DLL_CALL_LOG
 
 #undef DBJCAPI_DLL_LOAD_FILE_LEN
