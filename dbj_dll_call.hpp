@@ -65,9 +65,9 @@ extern "C" inline void actual_log_function
 #endif // DBJ_DLL_USER_PROVIDED_LOG_FUN
 /// note: in here we log only errors
 /// 
-#ifndef DBJ_DLL_CALL_LOG
-#define DBJ_DLL_CALL_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
-#endif // DBJ_DLL_CALL_LOG
+#ifndef DBJCS_LOADER_LOG
+#define DBJCS_LOADER_LOG(...) actual_log_function (__FILE__, __LINE__, __VA_ARGS__)
+#endif // DBJCS_LOADER_LOG
 
 namespace dbj {
 	namespace win {
@@ -108,7 +108,7 @@ namespace dbj {
 				is_system_module(system_mod)
 			{
 				if (!dll_file_name_) {
-					DBJ_DLL_CALL_LOG(
+					DBJCS_LOADER_LOG(
 						"dll_load(), needs dll or exe name as the first argument"
 					);
 					return;
@@ -121,7 +121,7 @@ namespace dbj {
 				dll_handle_ = ::LoadLibraryA(dll_name_);
 
 				if (NULL == dll_handle_)
-					DBJ_DLL_CALL_LOG(
+					DBJCS_LOADER_LOG(
 						" Could not find the DLL by name: %s", dll_name_
 					);
 			}
@@ -135,7 +135,7 @@ namespace dbj {
 				if (this->valid()) {
 					if (!::FreeLibrary(dll_handle_))
 					{
-						DBJ_DLL_CALL_LOG(
+						DBJCS_LOADER_LOG(
 							"\ndbj::dll_load::FreeLibrary failed. The DLL name is: %s", dll_name_);
 					}
 					this->dll_handle_ = nullptr;
@@ -155,7 +155,7 @@ namespace dbj {
 
 				if (!this->valid())
 				{
-					DBJ_DLL_CALL_LOG(
+					DBJCS_LOADER_LOG(
 						"instance is not in a valid state!");
 					return nullptr;
 				}
@@ -170,7 +170,7 @@ namespace dbj {
 					);
 #ifdef _DEBUG
 				if (result == nullptr)
-					DBJ_DLL_CALL_LOG(
+					DBJCS_LOADER_LOG(
 						"\nFailed to find the address for a function: %s\nThe DLL name is: %s", fun_name_, dll_name_  );
 #endif // _DEBUG
 				return (AFT)result;

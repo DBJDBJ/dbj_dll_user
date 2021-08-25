@@ -80,7 +80,7 @@ For the test please look into `test.cpp`. That is not extremely trivial test. Pl
 Error reporting is usualy done with file logging.
 By default `dbj::win::dll_load` logs to `actual_log_function` through this macro:
 ```cpp
-#define DBJ_DLL_CALL_LOG(...) \
+#define DBJCS_LOADER_LOG(...) \
 actual_log_function \
 (__FILE__, __LINE__, __VA_ARGS__)
 ```

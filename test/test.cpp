@@ -107,7 +107,7 @@ static bool  beeper_function(BeepFP beepFunction)
 	do {
 		rezult_ = beepFunction(frequency, duration);
 		if (!rezult_) {
-			DBJ_DLL_CALL_LOG(__FUNCSIG__ "beepFunction() FAILED ?");
+			DBJCS_LOADER_LOG(__FUNCSIG__ "beepFunction() FAILED ?");
 			break;
 		}
 		frequency -= f_step;
