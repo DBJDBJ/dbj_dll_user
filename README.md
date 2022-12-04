@@ -1,6 +1,8 @@
 # `dbj::win::dll_load`
 
-(c) 2018-2020 by dbj@dbj.org
+### For using windows dll's as basis of simple but real components [please see here](https://github.com/dbj-data/dbj-dll).
+
+(c) 2018-2022 by dbj@dbj.org
 
 ## WIN32 DLL dynamic loader
 
